@@ -9,6 +9,7 @@
 
 #include "mysql_async_wrapper.h"
 
+#include <cstddef>
 #include <mysql.h>
 
 // MYSQL_WAIT_* constants for non-blocking API
