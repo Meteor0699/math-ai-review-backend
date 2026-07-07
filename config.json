@@ -26,7 +26,11 @@
       "is_fast": true,
       "number_of_connections": 1,
       "timeout": 5.0,
-      "auto_batch": false
+      "auto_batch": false,
+      "properties": {
+        "ssl_mode": "${DB_SSL_MODE:DISABLED}",
+        "ssl_ca": "${DB_SSL_CA:}"
+      }
     }
   ],
   "custom_config": {
