@@ -19,22 +19,33 @@ file(GLOB_RECURSE PROJECT_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/models/*.cc"
 )
 
-add_executable(${PROJECT_NAME}
-    main.cc
+find_package(CURL REQUIRED)
+
+# Build project sources as a static library to enable --whole-archive linking.
+# This prevents the linker from discarding controller static initializers
+# in Release builds, which would cause all API routes to return 404.
+add_library(${PROJECT_NAME}_lib STATIC
     ${PROJECT_SOURCES}
     mysql_async_wrapper.cc
 )
-
-target_include_directories(${PROJECT_NAME}
+target_include_directories(${PROJECT_NAME}_lib
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${MYSQL_INCLUDE_DIRS}
 )
+target_link_libraries(${PROJECT_NAME}_lib
+    PRIVATE
+        Drogon::Drogon
+        OpenSSL::Crypto
+        CURL::libcurl
+)
 
-find_package(CURL REQUIRED)
-
+add_executable(${PROJECT_NAME} main.cc)
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
+        -Wl,--whole-archive
+        ${PROJECT_NAME}_lib
+        -Wl,--no-whole-archive
         Drogon::Drogon
         OpenSSL::Crypto
         CURL::libcurl
