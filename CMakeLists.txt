@@ -31,10 +31,13 @@ target_include_directories(${PROJECT_NAME}
         ${MYSQL_INCLUDE_DIRS}
 )
 
+find_package(CURL REQUIRED)
+
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Drogon::Drogon
         OpenSSL::Crypto
+        CURL::libcurl
 )
 
 if(MSVC)
@@ -52,7 +55,6 @@ if(MINGW)
             ncrypt
             bcrypt
             zstd
-            curl
             shlwapi
             mswsock
             ssp
