@@ -101,18 +101,20 @@ Set-Location $projectRoot
 Invoke-Git rev-parse --is-inside-work-tree | Out-Null
 
 if (-not $Branch) {
-    $Branch = (& git branch --show-current).Trim()
+    $branchOutput = & git branch --show-current
+    $Branch = if ($null -eq $branchOutput) { "" } else { $branchOutput.ToString().Trim() }
     if (-not $Branch) {
         throw "Cannot detect current branch. Please pass -Branch explicitly."
     }
 }
 
-$trackedEnv = (& git ls-files ".env").Trim()
+$trackedEnvOutput = & git ls-files ".env"
+$trackedEnv = if ($null -eq $trackedEnvOutput) { "" } else { $trackedEnvOutput.ToString().Trim() }
 if ($trackedEnv) {
     throw ".env is tracked by git. Remove it from git before pushing secrets."
 }
 
-$status = & git status --porcelain
+$status = @(& git status --porcelain)
 $hasChanges = $status.Count -gt 0
 
 if ($hasChanges) {
