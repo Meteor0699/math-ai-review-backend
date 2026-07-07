@@ -53,9 +53,10 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制编译好的二进制文件
+# 复制编译好的二进制文件和配置
 COPY --from=builder /build/build/math-ai-review-backend /app/
 COPY --from=builder /build/config.json /app/
+COPY --from=builder /build/ca.pem /app/
 
 WORKDIR /app
 

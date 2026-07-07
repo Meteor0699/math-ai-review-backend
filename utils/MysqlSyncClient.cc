@@ -3,9 +3,38 @@
 #include <drogon/drogon.h>
 #include <mysql.h>
 
+#include <cstdlib>
 #include <fstream>
 #include <memory>
 #include <mutex>
+
+namespace
+{
+
+std::string getenvString(const char *name, const std::string &fallback = "")
+{
+    const char *value = std::getenv(name);
+    return value ? std::string(value) : fallback;
+}
+
+unsigned int getenvUInt(const char *name, unsigned int fallback)
+{
+    const char *value = std::getenv(name);
+    if (!value || !value[0])
+    {
+        return fallback;
+    }
+    try
+    {
+        return static_cast<unsigned int>(std::stoul(value));
+    }
+    catch (const std::exception &)
+    {
+        return fallback;
+    }
+}
+
+}
 
 namespace mathai::utils::mysql
 {
@@ -53,6 +82,13 @@ DbConfig loadConfig()
         config.dbname = db.get("dbname", config.dbname).asString();
         config.user = db.get("user", config.user).asString();
         config.password = db.get("passwd", config.password).asString();
+
+        // Environment variables override config.json for deployment flexibility
+        config.host = getenvString("DB_HOST", config.host);
+        config.port = getenvUInt("DB_PORT", config.port);
+        config.dbname = getenvString("DB_NAME", config.dbname);
+        config.user = getenvString("DB_USER", config.user);
+        config.password = getenvString("DB_PASSWORD", config.password);
     });
 
     if (!error.empty())
@@ -78,9 +114,20 @@ MysqlPtr connect()
     mysql_options(conn.get(), MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
     mysql_options(conn.get(), MYSQL_OPT_READ_TIMEOUT, &timeout);
     mysql_options(conn.get(), MYSQL_OPT_WRITE_TIMEOUT, &timeout);
-    my_bool disableSsl = 0;
-    mysql_optionsv(conn.get(), MYSQL_OPT_SSL_ENFORCE, &disableSsl);
-    mysql_optionsv(conn.get(), MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &disableSsl);
+
+    const std::string sslMode = getenvString("DB_SSL_MODE", "DISABLED");
+    if (sslMode == "REQUIRED" || sslMode == "PREFERRED")
+    {
+        mysql_ssl_set(conn.get(), nullptr, nullptr, getenvString("DB_SSL_CA", "").c_str(), nullptr, nullptr);
+        my_bool enforceSsl = 1;
+        mysql_optionsv(conn.get(), MYSQL_OPT_SSL_ENFORCE, &enforceSsl);
+    }
+    else
+    {
+        my_bool disableSsl = 0;
+        mysql_optionsv(conn.get(), MYSQL_OPT_SSL_ENFORCE, &disableSsl);
+        mysql_optionsv(conn.get(), MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &disableSsl);
+    }
 
     if (!mysql_real_connect(conn.get(),
                             config.host.c_str(),
