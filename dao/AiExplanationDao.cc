@@ -1,4 +1,4 @@
-﻿#include "dao/AiExplanationDao.h"
+#include "dao/AiExplanationDao.h"
 
 #include <drogon/drogon.h>
 

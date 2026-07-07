@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# 编译安装 Drogon
-RUN git clone https://github.com/drogonframework/drogon.git /tmp/drogon && \
+# 编译安装 Drogon (使用稳定版本 v1.9.0)
+RUN git clone --branch v1.9.0 --depth 1 https://github.com/drogonframework/drogon.git /tmp/drogon && \
     cd /tmp/drogon && \
     git submodule update --init --recursive && \
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_ORM=ON -DBUILD_MYSQL=ON && \
