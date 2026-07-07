@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿#include "controllers/PaperController.h"
+#include "controllers/PaperController.h"
 
 #include <drogon/drogon.h>
 

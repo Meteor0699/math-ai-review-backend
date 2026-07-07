@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿#include "dao/QuestionDao.h"
+#include "dao/QuestionDao.h"
 
 #include <drogon/drogon.h>
 
