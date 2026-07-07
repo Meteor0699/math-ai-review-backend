@@ -1,6 +1,7 @@
 #include <drogon/drogon.h>
 
 #include <filesystem>
+#include <string>
 
 #include "controllers/AiController.h"
 #include "controllers/AuthController.h"
@@ -32,22 +33,56 @@ static void forceKeepControllers()
     (void)refs;
 }
 
-static std::filesystem::path findFrontendIndex()
+static std::filesystem::path findFrontendDist()
 {
     const std::filesystem::path candidates[] = {
-        "frontend_dist/index.html",
-        "frontend/dist/index.html",
-        "../frontend/dist/index.html",
+        "frontend_dist",
+        "frontend/dist",
+        "../frontend/dist",
     };
 
     for (const auto &candidate : candidates)
     {
-        if (std::filesystem::exists(candidate))
+        if (std::filesystem::exists(candidate / "index.html"))
         {
             return candidate;
         }
     }
     return {};
+}
+
+static std::string trimLeadingSlash(const std::string &path)
+{
+    const auto first = path.find_first_not_of('/');
+    return first == std::string::npos ? "" : path.substr(first);
+}
+
+static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr &request)
+{
+    const auto root = findFrontendDist();
+    if (root.empty())
+    {
+        return mathai::utils::error(404, "api not found", drogon::k404NotFound);
+    }
+
+    const auto path = request->path();
+    auto target = root / trimLeadingSlash(path);
+    if (path == "/" || !std::filesystem::exists(target))
+    {
+        target = root / "index.html";
+    }
+
+    if (std::filesystem::is_directory(target))
+    {
+        target /= "index.html";
+    }
+
+    if (!std::filesystem::exists(target))
+    {
+        return mathai::utils::error(404, "api not found", drogon::k404NotFound);
+    }
+
+    return drogon::HttpResponse::newFileResponse(target.string(), "", drogon::CT_NONE, "");
 }
 
 static void registerFrontendRoot()
@@ -56,14 +91,15 @@ static void registerFrontendRoot()
         "/",
         [](const drogon::HttpRequestPtr &request,
            std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
-            const auto index = findFrontendIndex();
-            if (!index.empty())
-            {
-                (void)request;
-                callback(drogon::HttpResponse::newFileResponse(index.string(), "", drogon::CT_NONE, ""));
-                return;
-            }
-            callback(mathai::utils::error(404, "api not found", drogon::k404NotFound));
+            callback(frontendFileResponse(request));
+        },
+        {drogon::Get});
+
+    drogon::app().registerHandlerViaRegex(
+        "^/(login|home|courses.*|chapters.*|questions.*|papers.*|admin.*|assets/.*)$",
+        [](const drogon::HttpRequestPtr &request,
+           std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
+            callback(frontendFileResponse(request));
         },
         {drogon::Get});
 }
