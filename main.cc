@@ -7,6 +7,7 @@
 #include "controllers/AuthController.h"
 #include "controllers/ChapterController.h"
 #include "controllers/CourseController.h"
+#include "controllers/HealthController.h"
 #include "controllers/KnowledgeController.h"
 #include "controllers/PaperController.h"
 #include "controllers/QuestionController.h"
@@ -29,6 +30,7 @@ static void forceKeepControllers()
         &PaperController::isAutoCreation,
         &AiController::isAutoCreation,
         &UserController::isAutoCreation,
+        &HealthController::isAutoCreation,
     };
     (void)refs;
 }

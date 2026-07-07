@@ -34,6 +34,30 @@ unsigned int getenvUInt(const char *name, unsigned int fallback)
     }
 }
 
+std::string urlDecode(const std::string &value)
+{
+    std::string output;
+    output.reserve(value.size());
+    for (std::size_t i = 0; i < value.size(); ++i)
+    {
+        if (value[i] == '%' && i + 2 < value.size())
+        {
+            const auto hex = value.substr(i + 1, 2);
+            try
+            {
+                output.push_back(static_cast<char>(std::stoul(hex, nullptr, 16)));
+                i += 2;
+                continue;
+            }
+            catch (const std::exception &)
+            {
+            }
+        }
+        output.push_back(value[i]);
+    }
+    return output;
+}
+
 }
 
 namespace mathai::utils::mysql
@@ -50,6 +74,8 @@ struct DbConfig
     std::string password{"123456"};
 };
 
+void applyUrlConfig(DbConfig &config, const std::string &url);
+
 void applyEnvOverrides(DbConfig &config)
 {
     // Explicit deployment variables.
@@ -65,6 +91,98 @@ void applyEnvOverrides(DbConfig &config)
     config.dbname = getenvString("MYSQLDATABASE", config.dbname);
     config.user = getenvString("MYSQLUSER", config.user);
     config.password = getenvString("MYSQLPASSWORD", config.password);
+
+    const auto url = getenvString("DATABASE_URL",
+                     getenvString("MYSQL_URL",
+                     getenvString("DB_URL",
+                     getenvString("MYSQL_PUBLIC_URL", ""))));
+    if (!url.empty())
+    {
+        applyUrlConfig(config, url);
+    }
+
+    if (config.host.find("://") != std::string::npos)
+    {
+        applyUrlConfig(config, config.host);
+    }
+}
+
+void applyUrlConfig(DbConfig &config, const std::string &url)
+{
+    const auto schemePos = url.find("://");
+    if (schemePos == std::string::npos)
+    {
+        return;
+    }
+
+    const auto authorityStart = schemePos + 3;
+    const auto pathStart = url.find('/', authorityStart);
+    const auto authority = pathStart == std::string::npos
+        ? url.substr(authorityStart)
+        : url.substr(authorityStart, pathStart - authorityStart);
+    auto path = pathStart == std::string::npos ? "" : url.substr(pathStart + 1);
+    const auto queryPos = path.find('?');
+    if (queryPos != std::string::npos)
+    {
+        path = path.substr(0, queryPos);
+    }
+    if (!path.empty())
+    {
+        config.dbname = urlDecode(path);
+    }
+
+    const auto atPos = authority.rfind('@');
+    const auto userInfo = atPos == std::string::npos ? "" : authority.substr(0, atPos);
+    const auto hostPort = atPos == std::string::npos ? authority : authority.substr(atPos + 1);
+    if (!userInfo.empty())
+    {
+        const auto colonPos = userInfo.find(':');
+        config.user = urlDecode(colonPos == std::string::npos ? userInfo : userInfo.substr(0, colonPos));
+        if (colonPos != std::string::npos)
+        {
+            config.password = urlDecode(userInfo.substr(colonPos + 1));
+        }
+    }
+
+    if (!hostPort.empty())
+    {
+        if (hostPort.front() == '[')
+        {
+            const auto endBracket = hostPort.find(']');
+            if (endBracket != std::string::npos)
+            {
+                config.host = hostPort.substr(1, endBracket - 1);
+                if (endBracket + 2 <= hostPort.size() && hostPort[endBracket + 1] == ':')
+                {
+                    try
+                    {
+                        config.port = static_cast<unsigned int>(std::stoul(hostPort.substr(endBracket + 2)));
+                    }
+                    catch (const std::exception &)
+                    {
+                    }
+                }
+            }
+            return;
+        }
+
+        const auto colonPos = hostPort.rfind(':');
+        if (colonPos == std::string::npos)
+        {
+            config.host = hostPort;
+        }
+        else
+        {
+            config.host = hostPort.substr(0, colonPos);
+            try
+            {
+                config.port = static_cast<unsigned int>(std::stoul(hostPort.substr(colonPos + 1)));
+            }
+            catch (const std::exception &)
+            {
+            }
+        }
+    }
 }
 
 DbConfig loadConfig()
