@@ -19,7 +19,7 @@
       "name": "default",
       "rdbms": "mysql",
       "host": "${DB_HOST:127.0.0.1}",
-      "port": ${DB_PORT:3306},
+      "port": "${DB_PORT:3306}",
       "dbname": "${DB_NAME:math_ai_review}",
       "user": "${DB_USER:root}",
       "passwd": "${DB_PASSWORD:123456}",
