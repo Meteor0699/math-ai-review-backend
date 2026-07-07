@@ -50,6 +50,23 @@ struct DbConfig
     std::string password{"123456"};
 };
 
+void applyEnvOverrides(DbConfig &config)
+{
+    // Explicit deployment variables.
+    config.host = getenvString("DB_HOST", config.host);
+    config.port = getenvUInt("DB_PORT", config.port);
+    config.dbname = getenvString("DB_NAME", config.dbname);
+    config.user = getenvString("DB_USER", config.user);
+    config.password = getenvString("DB_PASSWORD", config.password);
+
+    // Common MySQL hosting variables.
+    config.host = getenvString("MYSQLHOST", config.host);
+    config.port = getenvUInt("MYSQLPORT", config.port);
+    config.dbname = getenvString("MYSQLDATABASE", config.dbname);
+    config.user = getenvString("MYSQLUSER", config.user);
+    config.password = getenvString("MYSQLPASSWORD", config.password);
+}
+
 DbConfig loadConfig()
 {
     static std::once_flag once;
@@ -58,37 +75,28 @@ DbConfig loadConfig()
 
     std::call_once(once, [] {
         std::ifstream input("config.json");
-        if (!input)
+        if (input)
         {
-            return;
+            Json::Value root;
+            Json::CharReaderBuilder builder;
+            if (!Json::parseFromStream(builder, input, &root, &error))
+            {
+                return;
+            }
+
+            const auto clients = root["db_clients"];
+            if (clients.isArray() && !clients.empty())
+            {
+                const auto &db = clients[0U];
+                config.host = db.get("host", config.host).asString();
+                config.port = db.get("port", static_cast<int>(config.port)).asUInt();
+                config.dbname = db.get("dbname", config.dbname).asString();
+                config.user = db.get("user", config.user).asString();
+                config.password = db.get("passwd", config.password).asString();
+            }
         }
 
-        Json::Value root;
-        Json::CharReaderBuilder builder;
-        if (!Json::parseFromStream(builder, input, &root, &error))
-        {
-            return;
-        }
-
-        const auto clients = root["db_clients"];
-        if (!clients.isArray() || clients.empty())
-        {
-            return;
-        }
-
-        const auto &db = clients[0U];
-        config.host = db.get("host", config.host).asString();
-        config.port = db.get("port", static_cast<int>(config.port)).asUInt();
-        config.dbname = db.get("dbname", config.dbname).asString();
-        config.user = db.get("user", config.user).asString();
-        config.password = db.get("passwd", config.password).asString();
-
-        // Environment variables override config.json for deployment flexibility
-        config.host = getenvString("DB_HOST", config.host);
-        config.port = getenvUInt("DB_PORT", config.port);
-        config.dbname = getenvString("DB_NAME", config.dbname);
-        config.user = getenvString("DB_USER", config.user);
-        config.password = getenvString("DB_PASSWORD", config.password);
+        applyEnvOverrides(config);
     });
 
     if (!error.empty())
