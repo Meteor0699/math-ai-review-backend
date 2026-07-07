@@ -59,7 +59,8 @@ static void registerFrontendRoot()
             const auto index = findFrontendIndex();
             if (!index.empty())
             {
-                callback(drogon::HttpResponse::newFileResponse(index.string(), "", drogon::CT_NONE, "", request));
+                (void)request;
+                callback(drogon::HttpResponse::newFileResponse(index.string(), "", drogon::CT_NONE, ""));
                 return;
             }
             callback(mathai::utils::error(404, "api not found", drogon::k404NotFound));

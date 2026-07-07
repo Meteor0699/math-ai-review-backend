@@ -78,7 +78,8 @@ drogon::HttpResponsePtr frontendResponse(const drogon::HttpRequestPtr &request)
         return nullptr;
     }
 
-    return drogon::HttpResponse::newFileResponse(target.string(), "", drogon::CT_NONE, "", request);
+    (void)request;
+    return drogon::HttpResponse::newFileResponse(target.string(), "", drogon::CT_NONE, "");
 }
 
 } // namespace
