@@ -61,6 +61,52 @@ export function askAiFollowUp(questionId, question) {
   })
 }
 
+export function getStudyState(questionId) {
+  return request({
+    url: `/questions/${questionId}/study-state`,
+    method: 'get'
+  })
+}
+
+export function recordQuestionStudy(questionId, data = {}) {
+  return request({
+    url: `/questions/${questionId}/study-record`,
+    method: 'post',
+    data
+  })
+}
+
+export function addWrongQuestion(questionId, data = {}) {
+  return request({
+    url: `/questions/${questionId}/wrong-book`,
+    method: 'post',
+    data
+  })
+}
+
+export function removeWrongQuestion(questionId) {
+  return request({
+    url: `/questions/${questionId}/wrong-book`,
+    method: 'delete'
+  })
+}
+
+export function getQuestionRecords(params) {
+  return request({
+    url: '/my/question-records',
+    method: 'get',
+    params
+  })
+}
+
+export function getWrongQuestions(params) {
+  return request({
+    url: '/my/wrong-questions',
+    method: 'get',
+    params
+  })
+}
+
 export function getPaperList(params) {
   return request({
     url: '/papers',

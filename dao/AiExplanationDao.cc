@@ -89,7 +89,9 @@ void AiExplanationDao::saveSuccess(long long questionId,
         const auto result = mathai::utils::mysql::execute(
             "INSERT INTO ai_explanation (question_id, model_name, prompt, explanation, status) VALUES (" +
             std::to_string(questionId) + ", " + mathai::utils::mysql::quote(modelName) + ", " +
-            mathai::utils::mysql::quote(prompt) + ", " + mathai::utils::mysql::quote(explanation) + ", 'success')");
+            mathai::utils::mysql::quote(prompt) + ", " + mathai::utils::mysql::quote(explanation) + ", 'success') "
+            "ON DUPLICATE KEY UPDATE model_name = VALUES(model_name), prompt = VALUES(prompt), "
+            "explanation = VALUES(explanation), status = 'success', error_message = NULL, generated_at = CURRENT_TIMESTAMP");
         Json::Value data;
         data["id"] = Json::UInt64(result.insertId);
         data["questionId"] = Json::Int64(questionId);

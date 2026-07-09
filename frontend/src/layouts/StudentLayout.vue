@@ -56,6 +56,10 @@
             <el-icon><Edit /></el-icon>
             <span>题库练习</span>
           </el-menu-item>
+          <el-menu-item index="/study">
+            <el-icon><Notebook /></el-icon>
+            <span>学习记录</span>
+          </el-menu-item>
           <el-menu-item index="/papers">
             <el-icon><Document /></el-icon>
             <span>往年试题</span>
@@ -84,6 +88,7 @@ const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/courses')) return '/courses'
   if (path.startsWith('/questions')) return '/questions'
+  if (path.startsWith('/study')) return '/study'
   if (path.startsWith('/papers')) return '/papers'
   if (path.startsWith('/chapters') || path.startsWith('/knowledge')) return '/courses'
   return path

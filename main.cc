@@ -11,6 +11,7 @@
 #include "controllers/KnowledgeController.h"
 #include "controllers/PaperController.h"
 #include "controllers/QuestionController.h"
+#include "controllers/StudyController.h"
 #include "controllers/UserController.h"
 #include "utils/EnvLoader.h"
 #include "utils/ErrorHandler.h"
@@ -29,6 +30,7 @@ static void forceKeepControllers()
         &QuestionController::isAutoCreation,
         &PaperController::isAutoCreation,
         &AiController::isAutoCreation,
+        &StudyController::isAutoCreation,
         &UserController::isAutoCreation,
         &HealthController::isAutoCreation,
     };
@@ -98,7 +100,7 @@ static void registerFrontendRoot()
         {drogon::Get});
 
     drogon::app().registerHandlerViaRegex(
-        "^/(login|home|courses.*|chapters.*|questions.*|papers.*|admin.*|assets/.*)$",
+        "^/(login|home|courses.*|chapters.*|questions.*|study.*|papers.*|admin.*|assets/.*)$",
         [](const drogon::HttpRequestPtr &request,
            std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
             callback(frontendFileResponse(request));

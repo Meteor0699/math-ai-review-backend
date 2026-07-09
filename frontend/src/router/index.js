@@ -12,6 +12,7 @@ import KnowledgeDetail from '../views/student/KnowledgeDetail.vue'
 import QuestionList from '../views/student/QuestionList.vue'
 import QuestionDetail from '../views/student/QuestionDetail.vue'
 import PaperList from '../views/student/PaperList.vue'
+import StudyCenter from '../views/student/StudyCenter.vue'
 
 // 管理员端页面
 import AdminLayout from '../layouts/AdminLayout.vue'
@@ -42,6 +43,7 @@ const routes = [
       { path: 'knowledge/:chapterId', name: 'KnowledgeDetail', component: KnowledgeDetail },
       { path: 'questions', name: 'QuestionList', component: QuestionList },
       { path: 'questions/:questionId', name: 'QuestionDetail', component: QuestionDetail },
+      { path: 'study', name: 'StudyCenter', component: StudyCenter },
       { path: 'papers', name: 'PaperList', component: PaperList }
     ]
   },
