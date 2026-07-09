@@ -112,15 +112,23 @@ CREATE TABLE exam_paper (
   file_path VARCHAR(500) NOT NULL COMMENT '服务器本地文件路径',
   file_size BIGINT NOT NULL DEFAULT 0 COMMENT '文件大小，单位字节',
   file_type VARCHAR(50) NOT NULL COMMENT '文件类型或扩展名',
+  owner_user_id BIGINT DEFAULT NULL COMMENT '上传用户ID，管理员导入或系统内置试卷可为空',
+  visibility ENUM('public', 'private') NOT NULL DEFAULT 'public' COMMENT '可见性：public公开，private仅上传者可见',
+  ai_review_status ENUM('not_required', 'approved') NOT NULL DEFAULT 'not_required' COMMENT 'AI审核状态：not_required无需审核，approved审核通过',
+  ai_review_comment TEXT DEFAULT NULL COMMENT 'AI审核说明',
   split_status ENUM('not_split', 'splitting', 'split_done') NOT NULL DEFAULT 'not_split' COMMENT '拆题状态：not_split未拆题，splitting拆题中，split_done已拆题',
   status TINYINT NOT NULL DEFAULT 1 COMMENT '试卷状态：0禁用，1正常',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
   KEY idx_exam_paper_course_year (course_id, exam_year),
+  KEY idx_exam_paper_owner_visibility (owner_user_id, visibility),
   KEY idx_exam_paper_status (status),
   CONSTRAINT fk_exam_paper_course
     FOREIGN KEY (course_id) REFERENCES course (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_exam_paper_owner
+    FOREIGN KEY (owner_user_id) REFERENCES user (id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='往年试卷表';
 

@@ -68,3 +68,21 @@ export function getPaperList(params) {
     params
   })
 }
+
+export function getMyPaperList(params) {
+  return request({
+    url: '/my/papers',
+    method: 'get',
+    params
+  })
+}
+
+export function uploadMyPaper(formData) {
+  return request({
+    url: '/my/papers/upload',
+    method: 'post',
+    data: formData,
+    timeout: 120000,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
