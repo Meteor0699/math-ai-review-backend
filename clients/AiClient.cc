@@ -29,6 +29,16 @@ std::string getenvString(const char *name)
     return value == nullptr ? "" : std::string(value);
 }
 
+std::string resolveModelName()
+{
+    const auto configuredModel = getenvString("AI_MODEL");
+    if (configuredModel.empty() || configuredModel == "deepseek-chat")
+    {
+        return "deepseek-v4-flash";
+    }
+    return configuredModel;
+}
+
 std::optional<ParsedUrl> parseUrl(const std::string &url)
 {
     const auto schemePos = url.find("://");
@@ -141,7 +151,7 @@ void AiClient::generateExplanation(const std::string &prompt, Callback callback)
 {
     const auto apiBaseUrl = getenvString("AI_API_BASE_URL");
     const auto apiKey = getenvString("AI_API_KEY");
-    const auto model = getenvString("AI_MODEL").empty() ? "deepseek-v4-flash" : getenvString("AI_MODEL");
+    const auto model = resolveModelName();
 
     LOG_INFO << "AiClient: using model=" << model << ", base_url=" << apiBaseUrl;
 
