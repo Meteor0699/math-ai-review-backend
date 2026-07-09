@@ -1,21 +1,28 @@
 <template>
   <div class="paper-list">
     <div class="page-header">
-      <h2>往年试题</h2>
+      <div>
+        <h2>往年试题</h2>
+        <p>集中查看课程试卷文件，用于考前模拟与题型熟悉</p>
+      </div>
     </div>
 
-    <div v-loading="loading">
+    <div v-loading="loading" class="paper-stack">
       <el-card
         v-for="paper in list"
         :key="paper.id"
         class="paper-card"
         shadow="hover"
+        :body-style="{ padding: '18px 20px' }"
       >
         <div class="paper-main">
+          <div class="paper-icon">
+            <el-icon><Document /></el-icon>
+          </div>
           <div class="paper-info">
             <div class="paper-title">{{ paper.title }}</div>
             <div class="paper-meta">
-              <el-tag size="small">{{ paper.examYear || '未知年份' }}</el-tag>
+              <el-tag size="small" effect="plain">{{ paper.examYear || '未知年份' }}</el-tag>
               <span>{{ paper.courseName }}</span>
               <span v-if="paper.originalFilename">{{ paper.originalFilename }}</span>
             </div>
@@ -44,8 +51,8 @@ onMounted(async () => {
   try {
     const res = await getPaperList({ page: 1, pageSize: 20 })
     list.value = res.data?.items || []
-  } catch (error) {
-    // 错误已在 request 拦截器中处理
+  } catch {
+    list.value = []
   } finally {
     loading.value = false
   }
@@ -63,20 +70,37 @@ function openPaper(paper) {
 
 <style scoped>
 .paper-list {
-  max-width: 900px;
+  max-width: 940px;
   margin: 0 auto;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .page-header h2 {
   font-size: 22px;
+  color: #1f2937;
+}
+
+.page-header p {
+  color: #909399;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.paper-stack {
+  display: grid;
+  gap: 12px;
 }
 
 .paper-card {
-  margin-bottom: 12px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.paper-card:hover {
+  transform: translateX(4px);
+  border-color: #cfe0ff;
 }
 
 .paper-main {
@@ -86,13 +110,27 @@ function openPaper(paper) {
   gap: 16px;
 }
 
+.paper-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #fff5dd;
+  color: #c97706;
+  flex-shrink: 0;
+}
+
 .paper-info {
+  flex: 1;
   min-width: 0;
 }
 
 .paper-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #1f2937;
   margin-bottom: 8px;
 }
 
@@ -103,5 +141,11 @@ function openPaper(paper) {
   align-items: center;
   font-size: 12px;
   color: #909399;
+}
+
+@media (max-width: 640px) {
+  .paper-main {
+    align-items: flex-start;
+  }
 }
 </style>

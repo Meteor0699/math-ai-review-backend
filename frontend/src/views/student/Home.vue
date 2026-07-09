@@ -1,21 +1,29 @@
 <template>
   <div class="home-page">
-    <section class="hero-banner">
-      <div class="hero-content">
-        <h1 class="hero-title">
-          <el-icon :size="34"><School /></el-icon>
-          数学 AI 复习助手
-        </h1>
-        <p class="hero-desc">系统化复习 · 重点知识梳理 · AI 智能讲解 · 往年试题精练</p>
+    <section class="hero-panel">
+      <div>
+        <span class="eyebrow">大学数学复习空间</span>
+        <h1>今天先把一个知识点吃透</h1>
+        <p>按课程进入章节，先看重点知识，再用题库和 AI 讲解补齐理解。</p>
+      </div>
+      <div class="today-card">
+        <span>建议顺序</span>
+        <strong>知识点 → 例题 → 追问</strong>
+        <small>适合考前 20-40 分钟一轮复盘</small>
       </div>
     </section>
 
     <section class="section">
-      <h2 class="section-title">
-        <el-icon><Collection /></el-icon>
-        课程选择
-      </h2>
-      <p class="section-desc">选择你需要复习的课程，按教材与章节进入学习</p>
+      <div class="section-heading">
+        <div>
+          <h2>课程选择</h2>
+          <p>选择你正在复习的课程</p>
+        </div>
+        <el-button text type="primary" @click="router.push('/courses')">
+          全部课程 <el-icon><ArrowRight /></el-icon>
+        </el-button>
+      </div>
+
       <div class="course-grid" v-loading="courseLoading">
         <el-card
           v-for="course in courseList"
@@ -36,7 +44,7 @@
             <div class="course-code">{{ course.courseCode }}</div>
             <div class="course-desc">{{ course.courseDesc }}</div>
             <div class="course-action">
-              <span>进入课程</span>
+              <span>进入学习</span>
               <el-icon><ArrowRight /></el-icon>
             </div>
           </div>
@@ -45,22 +53,23 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">
-        <el-icon><Menu /></el-icon>
-        快捷功能
-      </h2>
-      <p class="section-desc">快速进入常用复习模块</p>
+      <div class="section-heading">
+        <div>
+          <h2>快捷功能</h2>
+          <p>复习时最常用的入口</p>
+        </div>
+      </div>
       <div class="feature-grid">
         <el-card
           v-for="item in featureList"
           :key="item.path"
           class="feature-card"
           shadow="hover"
-          :body-style="{ padding: '24px' }"
+          :body-style="{ padding: '22px' }"
           @click="router.push(item.path)"
         >
-          <div class="feature-icon" :style="{ background: item.color }">
-            <el-icon :size="24"><component :is="item.icon" /></el-icon>
+          <div class="feature-icon" :class="item.tone">
+            <el-icon :size="22"><component :is="item.icon" /></el-icon>
           </div>
           <div class="feature-name">{{ item.name }}</div>
           <div class="feature-desc">{{ item.desc }}</div>
@@ -84,31 +93,31 @@ const courseLoading = ref(false)
 const featureList = [
   {
     name: '重点知识',
-    desc: '查看课程核心知识点与公式',
+    desc: '先抓公式、定理和易错点',
     path: '/courses',
     icon: 'Reading',
-    color: 'linear-gradient(135deg, #2f80ed 0%, #56ccf2 100%)'
+    tone: 'blue'
   },
   {
-    name: '题库',
-    desc: '按章节、难度筛选练习题目',
+    name: '题库练习',
+    desc: '按章节筛题，边做边查解析',
     path: '/questions',
     icon: 'Edit',
-    color: 'linear-gradient(135deg, #27ae60 0%, #6fcf97 100%)'
+    tone: 'green'
   },
   {
     name: '往年试题',
-    desc: '浏览历年考试真题与文件',
+    desc: '查看课程历年试卷资料',
     path: '/papers',
     icon: 'Document',
-    color: 'linear-gradient(135deg, #f2994a 0%, #f2c94c 100%)'
+    tone: 'orange'
   },
   {
     name: 'AI 讲解',
-    desc: '查看题目解析并继续追问',
+    desc: '题目看不懂时继续追问',
     path: '/questions',
     icon: 'MagicStick',
-    color: 'linear-gradient(135deg, #9b51e0 0%, #bb6bd9 100%)'
+    tone: 'purple'
   }
 ]
 
@@ -131,51 +140,81 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
-.hero-banner {
-  background: linear-gradient(135deg, #2f80ed 0%, #27ae60 100%);
-  border-radius: 8px;
-  padding: 44px 40px;
-  margin-bottom: 40px;
-  color: #fff;
-}
-
-.hero-content {
-  text-align: center;
-}
-
-.hero-title {
-  display: flex;
+.hero-panel {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: 30px;
-  font-weight: 700;
-  margin-bottom: 12px;
+  border: 1px solid #dbe6f8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 30px;
+  margin-bottom: 34px;
 }
 
-.hero-desc {
-  font-size: 15px;
-  opacity: 0.9;
+.eyebrow {
+  display: inline-block;
+  color: #2563eb;
+  background: #eaf2ff;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.hero-panel h1 {
+  font-size: 30px;
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.hero-panel p {
+  color: #5b6472;
+  line-height: 1.7;
+}
+
+.today-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9fbff;
+}
+
+.today-card span,
+.today-card small {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.today-card strong {
+  display: block;
+  color: #1f2937;
+  font-size: 18px;
+  margin: 10px 0;
 }
 
 .section {
-  margin-bottom: 36px;
+  margin-bottom: 34px;
 }
 
-.section-title {
+.section-heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 6px;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.section-desc {
-  font-size: 14px;
+.section-heading h2 {
+  font-size: 20px;
+  color: #1f2937;
+}
+
+.section-heading p {
   color: #909399;
-  margin-bottom: 20px;
+  font-size: 14px;
+  margin-top: 4px;
 }
 
 .course-grid {
@@ -184,21 +223,23 @@ onMounted(async () => {
   gap: 20px;
 }
 
-.course-card {
+.course-card,
+.feature-card {
   cursor: pointer;
   overflow: hidden;
-  border-radius: 8px;
-  transition: transform 0.25s, box-shadow 0.25s;
+  transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
 }
 
-.course-card:hover {
-  transform: translateY(-5px);
+.course-card:hover,
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: #cfe0ff;
 }
 
 .course-cover {
   display: block;
   width: 100%;
-  height: 190px;
+  height: 188px;
   object-fit: cover;
   background: #f5f7fa;
   border-bottom: 1px solid #ebeef5;
@@ -210,21 +251,21 @@ onMounted(async () => {
 
 .course-name {
   font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: #1f2937;
   margin-bottom: 4px;
 }
 
 .course-code {
   font-size: 13px;
-  color: #409EFF;
+  color: #2563eb;
   margin-bottom: 10px;
 }
 
 .course-desc {
   font-size: 13px;
   color: #606266;
-  line-height: 1.5;
+  line-height: 1.55;
   margin-bottom: 16px;
   min-height: 58px;
 }
@@ -234,52 +275,64 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #409EFF;
-  font-weight: 500;
+  color: #2563eb;
+  font-weight: 600;
 }
 
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.feature-card {
-  cursor: pointer;
-  text-align: center;
-  transition: transform 0.25s, box-shadow 0.25s;
-  border-radius: 8px;
-}
-
-.feature-card:hover {
-  transform: translateY(-4px);
+  gap: 18px;
 }
 
 .feature-icon {
   display: inline-flex;
-  justify-content: center;
   align-items: center;
-  width: 48px;
-  height: 48px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
-  color: #fff;
   margin-bottom: 14px;
+}
+
+.feature-icon.blue {
+  color: #2563eb;
+  background: #eaf2ff;
+}
+
+.feature-icon.green {
+  color: #16a34a;
+  background: #eaf8ef;
+}
+
+.feature-icon.orange {
+  color: #c97706;
+  background: #fff5dd;
+}
+
+.feature-icon.purple {
+  color: #7c3aed;
+  background: #f0eaff;
 }
 
 .feature-name {
   font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: #1f2937;
   margin-bottom: 6px;
 }
 
 .feature-desc {
   font-size: 13px;
-  color: #909399;
-  line-height: 1.4;
+  color: #6b7280;
+  line-height: 1.5;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 920px) {
+  .hero-panel {
+    grid-template-columns: 1fr;
+  }
+
   .course-grid,
   .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -287,17 +340,17 @@ onMounted(async () => {
 }
 
 @media (max-width: 640px) {
+  .hero-panel {
+    padding: 22px;
+  }
+
+  .hero-panel h1 {
+    font-size: 24px;
+  }
+
   .course-grid,
   .feature-grid {
     grid-template-columns: 1fr;
-  }
-
-  .hero-banner {
-    padding: 32px 20px;
-  }
-
-  .hero-title {
-    font-size: 22px;
   }
 }
 </style>

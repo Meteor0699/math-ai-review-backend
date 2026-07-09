@@ -1,14 +1,17 @@
 <template>
   <el-container class="layout-container">
-    <!-- 顶部导航 -->
     <el-header class="layout-header">
       <div class="header-left">
         <router-link to="/home" class="header-logo">
-          <el-icon :size="22"><School /></el-icon>
-          <span class="logo-text">数学 AI 复习助手</span>
+          <span class="logo-mark">
+            <el-icon :size="22"><School /></el-icon>
+          </span>
+          <span class="logo-text">数研 AI</span>
+          <span class="logo-sub">大学数学复习</span>
         </router-link>
       </div>
       <div class="header-right">
+        <span class="study-pill">期末复习模式</span>
         <el-dropdown trigger="click">
           <span class="user-info">
             <el-avatar :size="32" icon="UserFilled" />
@@ -31,27 +34,27 @@
     </el-header>
 
     <el-container>
-      <!-- 侧边导航 -->
-      <el-aside width="200px" class="layout-aside">
+      <el-aside width="216px" class="layout-aside">
+        <div class="aside-title">学习导航</div>
         <el-menu
           :default-active="activeMenu"
           router
-          background-color="#fff"
-          text-color="#606266"
-          active-text-color="#409EFF"
+          background-color="transparent"
+          text-color="#4b5563"
+          active-text-color="#2563eb"
           style="border-right: none"
         >
           <el-menu-item index="/home">
             <el-icon><HomeFilled /></el-icon>
-            <span>首页</span>
+            <span>今日学习</span>
           </el-menu-item>
           <el-menu-item index="/courses">
             <el-icon><Collection /></el-icon>
-            <span>课程列表</span>
+            <span>课程与教材</span>
           </el-menu-item>
           <el-menu-item index="/questions">
             <el-icon><Edit /></el-icon>
-            <span>题库</span>
+            <span>题库练习</span>
           </el-menu-item>
           <el-menu-item index="/papers">
             <el-icon><Document /></el-icon>
@@ -60,7 +63,6 @@
         </el-menu>
       </el-aside>
 
-      <!-- 主内容 -->
       <el-main class="layout-main">
         <router-view />
       </el-main>
@@ -102,35 +104,63 @@ function handleLogout() {
 <style scoped>
 .layout-container {
   height: 100vh;
+  background: var(--study-bg);
 }
 
 .layout-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0 24px;
-  height: 56px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--study-border);
+  padding: 0 28px;
+  height: 60px;
+  backdrop-filter: blur(10px);
 }
 
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
-  color: #303133;
+  color: var(--study-text);
+}
+
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #eaf2ff;
+  color: var(--study-primary);
 }
 
 .logo-text {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.logo-sub {
+  color: var(--study-muted);
+  font-size: 13px;
+  padding-left: 2px;
 }
 
 .header-right {
   display: flex;
   align-items: center;
+  gap: 18px;
+}
+
+.study-pill {
+  font-size: 12px;
+  color: #2563eb;
+  background: #eaf2ff;
+  border: 1px solid #cfe0ff;
+  border-radius: 999px;
+  padding: 6px 10px;
 }
 
 .user-info {
@@ -142,22 +172,53 @@ function handleLogout() {
 
 .user-name {
   font-size: 14px;
-  color: #606266;
+  color: #374151;
 }
 
 .layout-aside {
   background: #fff;
-  border-right: 1px solid #e4e7ed;
+  border-right: 1px solid var(--study-border);
   overflow-y: auto;
+  padding: 18px 12px;
 }
 
-.layout-aside .el-menu {
-  padding-top: 8px;
+.aside-title {
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 0 14px 10px;
+}
+
+.layout-aside :deep(.el-menu-item) {
+  height: 44px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.layout-aside :deep(.el-menu-item.is-active) {
+  background: var(--study-primary-soft);
+  font-weight: 600;
 }
 
 .layout-main {
-  background-color: #f5f7fa;
-  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(234, 242, 255, 0.55), rgba(246, 248, 251, 0) 260px),
+    var(--study-bg);
+  padding: 28px;
   overflow-y: auto;
+}
+
+@media (max-width: 760px) {
+  .layout-aside {
+    display: none;
+  }
+
+  .layout-main {
+    padding: 18px;
+  }
+
+  .logo-sub,
+  .study-pill {
+    display: none;
+  }
 }
 </style>

@@ -1,32 +1,56 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header">
-        <div class="login-icon">
-          <el-icon :size="48"><School /></el-icon>
+  <div class="login-page">
+    <section class="intro-panel">
+      <div class="brand-row">
+        <span class="brand-mark">
+          <el-icon><School /></el-icon>
+        </span>
+        <span>数研 AI</span>
+      </div>
+      <h1>把大学数学复习拆成每天能完成的小任务</h1>
+      <p class="intro-copy">
+        课程教材、章节知识点、题库和 AI 讲解放在同一个学习空间里，适合期中、期末和考前集中复盘。
+      </p>
+      <div class="intro-stats">
+        <div>
+          <strong>3</strong>
+          <span>门核心课程</span>
         </div>
-        <h1 class="login-title">数学 AI 复习助手</h1>
-        <p class="login-subtitle">高校数学智能复习平台</p>
+        <div>
+          <strong>AI</strong>
+          <span>题目讲解与追问</span>
+        </div>
+        <div>
+          <strong>历年</strong>
+          <span>试题资料管理</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="login-card">
+      <div class="login-header">
+        <h2>开始学习</h2>
+        <p>登录后进入你的数学复习空间</p>
       </div>
 
       <el-tabs v-model="mode" stretch>
         <el-tab-pane label="登录" name="login">
           <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" label-width="0" size="large">
             <el-form-item prop="username">
-              <el-input v-model="loginForm.username" placeholder="请输入用户名" :prefix-icon="User" clearable />
+              <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" clearable />
             </el-form-item>
             <el-form-item prop="password">
               <el-input
                 v-model="loginForm.password"
                 type="password"
-                placeholder="请输入密码"
+                placeholder="密码"
                 :prefix-icon="Lock"
                 show-password
                 @keyup.enter="handleLogin"
               />
             </el-form-item>
             <el-form-item>
-              <el-button type="primary" :loading="loading" style="width: 100%" @click="handleLogin">
+              <el-button type="primary" :loading="loading" class="submit-button" @click="handleLogin">
                 {{ loading ? '登录中...' : '登录' }}
               </el-button>
             </el-form-item>
@@ -64,7 +88,7 @@
               />
             </el-form-item>
             <el-form-item>
-              <el-button type="success" :loading="loading" style="width: 100%" @click="handleRegister">
+              <el-button type="primary" :loading="loading" class="submit-button" @click="handleRegister">
                 {{ loading ? '注册中...' : '注册并进入' }}
               </el-button>
             </el-form-item>
@@ -73,9 +97,9 @@
       </el-tabs>
 
       <div class="login-footer">
-        <span>测试账号：admin / 123456，student / 123456</span>
+        测试账号：admin / 123456，student / 123456
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -186,58 +210,134 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.login-container {
+.login-page {
   min-height: 100vh;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 460px);
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  gap: 48px;
+  padding: 48px max(36px, 8vw);
   background:
-    radial-gradient(circle at 18% 18%, rgba(64, 158, 255, 0.16), transparent 32%),
-    linear-gradient(135deg, #eef6ff 0%, #f8fbf6 48%, #fff7ed 100%);
+    linear-gradient(180deg, rgba(234, 242, 255, 0.78), rgba(246, 248, 251, 0.25)),
+    #f6f8fb;
 }
 
-.login-card {
-  width: min(440px, 100%);
-  padding: 34px 36px 28px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 50px rgba(31, 45, 61, 0.14);
+.intro-panel {
+  max-width: 620px;
 }
 
-.login-header {
-  text-align: center;
-  margin-bottom: 22px;
+.brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #2563eb;
+  font-weight: 700;
+  margin-bottom: 28px;
 }
 
-.login-icon {
-  width: 72px;
-  height: 72px;
+.brand-mark {
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  color: #fff;
-  background: linear-gradient(135deg, #3078c6, #54b65f);
-  margin-bottom: 14px;
+  border-radius: 8px;
+  background: #eaf2ff;
 }
 
-.login-title {
+.intro-panel h1 {
+  font-size: 42px;
+  line-height: 1.2;
+  color: #1f2937;
+  max-width: 560px;
+  margin-bottom: 18px;
+}
+
+.intro-copy {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #5b6472;
+  max-width: 560px;
+}
+
+.intro-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.intro-stats div {
+  padding: 18px;
+  border: 1px solid #dbe6f8;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.intro-stats strong {
+  display: block;
   font-size: 24px;
-  font-weight: 700;
-  color: #1f2d3d;
+  color: #2563eb;
   margin-bottom: 6px;
 }
 
-.login-subtitle {
-  font-size: 14px;
+.intro-stats span {
   color: #6b7280;
+  font-size: 13px;
+}
+
+.login-card {
+  width: 100%;
+  padding: 32px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 48px rgba(31, 41, 55, 0.10);
+}
+
+.login-header {
+  margin-bottom: 18px;
+}
+
+.login-header h2 {
+  font-size: 24px;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.login-header p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.submit-button {
+  width: 100%;
 }
 
 .login-footer {
   margin-top: 12px;
   text-align: center;
   font-size: 12px;
-  color: #909399;
+  color: #9ca3af;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 28px 18px;
+  }
+
+  .intro-panel h1 {
+    font-size: 30px;
+  }
+
+  .intro-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
 }
 </style>
