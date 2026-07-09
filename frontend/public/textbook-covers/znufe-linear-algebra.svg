@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 500" role="img" aria-label="中南财经政法大学线性代数经管类封面卡片">
+  <rect width="360" height="500" rx="18" fill="#fff7f8"/>
+  <rect x="24" y="24" width="312" height="452" rx="14" fill="#ffffff" stroke="#b3264f" stroke-width="3"/>
+  <rect x="24" y="24" width="312" height="132" rx="14" fill="#b3264f"/>
+  <text x="180" y="72" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="23" font-weight="700" fill="#fff">中南财经政法大学</text>
+  <text x="180" y="115" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="31" font-weight="700" fill="#fff">线性代数</text>
+  <text x="180" y="194" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="22" fill="#b3264f">经管类参考</text>
+  <text x="180" y="285" text-anchor="middle" font-family="Georgia, serif" font-size="46" fill="#23364d">rank(A)</text>
+  <path d="M76 345 H284 M76 385 H284" stroke="#e293a7" stroke-width="8" stroke-linecap="round"/>
+  <text x="180" y="438" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="18" fill="#667085">财经管理类数学基础</text>
+</svg>

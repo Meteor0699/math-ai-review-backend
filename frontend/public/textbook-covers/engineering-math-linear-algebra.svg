@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 500" role="img" aria-label="工程数学线性代数封面卡片">
+  <rect width="360" height="500" rx="18" fill="#f7f7ff"/>
+  <rect x="24" y="24" width="312" height="452" rx="14" fill="#ffffff" stroke="#5847b7" stroke-width="3"/>
+  <rect x="24" y="24" width="312" height="132" rx="14" fill="#5847b7"/>
+  <text x="180" y="78" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="26" font-weight="700" fill="#fff">工程数学</text>
+  <text x="180" y="116" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="30" font-weight="700" fill="#fff">线性代数</text>
+  <path d="M92 325 L180 210 L268 325 Z" fill="none" stroke="#5847b7" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="92" cy="325" r="13" fill="#ffb84d"/>
+  <circle cx="180" cy="210" r="13" fill="#4ea5ff"/>
+  <circle cx="268" cy="325" r="13" fill="#4cc489"/>
+  <text x="180" y="396" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="20" fill="#4e5867">工程应用 / 矩阵方法</text>
+  <text x="180" y="438" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="17" fill="#667085">高等教育出版社参考</text>
+</svg>

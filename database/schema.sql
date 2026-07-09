@@ -206,10 +206,10 @@ CREATE TABLE ai_explanation (
 INSERT INTO user (id, username, password_hash, real_name, student_no, role, status) VALUES
 (1, 'admin', 'sha256$math-ai-review$b9ef3da9ebe71810e3c5d67b311bf23ce15f70646de275e131db945ed7ff0555', '管理员', NULL, 'admin', 1);
 
-INSERT INTO course (id, name, code, description, sort_order, status) VALUES
-(1, '高等数学', 'advanced_math', '面向高校在校生的高等数学复习课程，覆盖函数、极限、微积分、级数、微分方程等核心内容。', 1, 1),
-(2, '线性代数', 'linear_algebra', '面向高校在校生的线性代数复习课程，覆盖行列式、矩阵、向量组、线性方程组、特征值等核心内容。', 2, 1),
-(3, '概率论与数理统计', 'probability_statistics', '面向高校在校生的概率论与数理统计复习课程，覆盖随机事件、随机变量、数字特征、参数估计和假设检验等核心内容。', 3, 1);
+INSERT INTO course (id, name, code, description, cover_url, sort_order, status) VALUES
+(1, '高等数学', 'advanced_math', '面向高校在校生的高等数学复习课程，覆盖函数、极限、微积分、级数、微分方程等核心内容。', '/textbook-covers/tongji-advanced-math-1.svg', 1, 1),
+(2, '线性代数', 'linear_algebra', '面向高校在校生的线性代数复习课程，覆盖行列式、矩阵、向量组、线性方程组、特征值等核心内容。', '/textbook-covers/engineering-math-linear-algebra.svg', 2, 1),
+(3, '概率论与数理统计', 'probability_statistics', '面向高校在校生的概率论与数理统计复习课程，覆盖随机事件、随机变量、数字特征、参数估计和假设检验等核心内容。', '/textbook-covers/znufe-probability-statistics.svg', 3, 1);
 
 INSERT INTO chapter (course_id, parent_id, title, description, sort_order, status) VALUES
 (1, NULL, '函数、极限与连续', '高等数学基础章节，包含函数、数列极限、函数极限与连续性。', 1, 1),

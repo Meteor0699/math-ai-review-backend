@@ -1,30 +1,53 @@
 <template>
   <div class="course-detail">
-    <!-- 面包屑 -->
     <el-breadcrumb separator="/" style="margin-bottom: 16px">
       <el-breadcrumb-item :to="{ path: '/courses' }">课程列表</el-breadcrumb-item>
       <el-breadcrumb-item>{{ course?.courseName || '课程详情' }}</el-breadcrumb-item>
     </el-breadcrumb>
 
-    <!-- 课程信息 -->
     <div v-loading="courseLoading">
-      <el-card v-if="course" class="info-card" shadow="never">
-        <div class="info-header">
-          <div class="info-icon" :style="{ background: courseColors[(course.id % 3)] }">
+      <section v-if="course" class="course-hero">
+        <div class="hero-cover">
+          <img
+            v-if="getPrimaryCourseCover(course)"
+            :src="getPrimaryCourseCover(course)"
+            :alt="`${course.courseName} 课程封面`"
+          />
+          <div v-else class="info-icon" :style="{ background: courseColors[(course.id % 3)] }">
             <el-icon :size="28"><Notebook /></el-icon>
           </div>
-          <div class="info-text">
+        </div>
+        <div class="hero-main">
+          <div class="hero-title-row">
             <h2>{{ course.courseName }}</h2>
             <el-tag size="small" effect="plain">{{ course.courseCode }}</el-tag>
           </div>
+          <p class="info-desc">{{ course.courseDesc }}</p>
         </div>
-        <el-divider style="margin: 16px 0" />
-        <p class="info-desc">{{ course.courseDesc }}</p>
-      </el-card>
+      </section>
       <el-empty v-if="!courseLoading && !course" description="课程不存在" />
     </div>
 
-    <!-- 章节列表 -->
+    <section v-if="course && textbooks.length" class="textbook-section">
+      <div class="section-header">
+        <h3>
+          <el-icon><Reading /></el-icon>
+          参考教材封面
+        </h3>
+        <span class="section-count">共 {{ textbooks.length }} 本</span>
+      </div>
+      <div class="textbook-grid">
+        <div v-for="book in textbooks" :key="book.coverUrl" class="textbook-card">
+          <img class="textbook-cover" :src="book.coverUrl" :alt="book.title" />
+          <div class="textbook-info">
+            <strong>{{ book.title }}</strong>
+            <span>{{ book.subtitle }}</span>
+            <small>{{ book.publisher }}</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="section-header" style="margin-top: 28px">
       <h3>
         <el-icon><Folder /></el-icon>
@@ -66,24 +89,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getCourseDetail, getChapters } from '../../api/course'
+import { getCourseTextbooks, getPrimaryCourseCover } from '../../data/courseTextbooks'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const courseId = route.params.courseId
 
 const courseColors = [
-  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+  'linear-gradient(135deg, #2f80ed 0%, #56ccf2 100%)',
+  'linear-gradient(135deg, #27ae60 0%, #6fcf97 100%)',
+  'linear-gradient(135deg, #9b51e0 0%, #bb6bd9 100%)'
 ]
 
 const course = ref(null)
 const chapters = ref([])
 const courseLoading = ref(false)
 const chaptersLoading = ref(false)
+const textbooks = computed(() => getCourseTextbooks(course.value))
 
 onMounted(async () => {
   courseLoading.value = true
@@ -110,46 +135,74 @@ onMounted(async () => {
 
 <style scoped>
 .course-detail {
-  max-width: 900px;
+  max-width: 980px;
   margin: 0 auto;
 }
 
-/* 课程信息卡片 */
-.info-card {
-  border-radius: 10px;
+.course-hero {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 24px;
+  align-items: stretch;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
 }
 
-.info-header {
+.hero-cover {
+  min-height: 240px;
+  background: #f5f7fa;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  border-right: 1px solid #ebeef5;
+}
+
+.hero-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-main {
+  padding: 28px 28px 24px 0;
+}
+
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hero-title-row h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #303133;
 }
 
 .info-icon {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
   color: #fff;
   flex-shrink: 0;
-}
-
-.info-text h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #303133;
-  margin-bottom: 6px;
 }
 
 .info-desc {
   font-size: 14px;
   color: #606266;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
-/* 章节列表 */
+.textbook-section {
+  margin-top: 28px;
+}
+
 .section-header {
   display: flex;
   align-items: center;
@@ -168,6 +221,45 @@ onMounted(async () => {
 .section-count {
   font-size: 13px;
   color: #909399;
+}
+
+.textbook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.textbook-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.textbook-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 0.72;
+  object-fit: cover;
+  background: #f5f7fa;
+}
+
+.textbook-info {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.textbook-info strong {
+  font-size: 15px;
+  color: #303133;
+}
+
+.textbook-info span,
+.textbook-info small {
+  color: #909399;
+  font-size: 12px;
 }
 
 .chapter-card {
@@ -228,5 +320,21 @@ onMounted(async () => {
   border-top: 1px dashed #e4e7ed;
   display: flex;
   gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .course-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-cover {
+    height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid #ebeef5;
+  }
+
+  .hero-main {
+    padding: 22px;
+  }
 }
 </style>

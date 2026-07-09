@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 500" role="img" aria-label="同济概率论与数理统计封面卡片">
+  <rect width="360" height="500" rx="18" fill="#f9f7ff"/>
+  <rect x="24" y="24" width="312" height="452" rx="14" fill="#ffffff" stroke="#6b46c1" stroke-width="3"/>
+  <rect x="24" y="24" width="312" height="132" rx="14" fill="#6b46c1"/>
+  <text x="180" y="78" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="25" font-weight="700" fill="#fff">概率论与</text>
+  <text x="180" y="116" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="29" font-weight="700" fill="#fff">数理统计</text>
+  <text x="180" y="194" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="22" fill="#6b46c1">同济 / 高校数学参考</text>
+  <circle cx="180" cy="306" r="76" fill="none" stroke="#a88ff0" stroke-width="12"/>
+  <path d="M180 230 A76 76 0 0 1 256 306 L180 306 Z" fill="#6b46c1" opacity=".86"/>
+  <text x="180" y="405" text-anchor="middle" font-family="Georgia, serif" font-size="30" fill="#23364d">μ · σ² · N(0,1)</text>
+  <text x="180" y="444" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="17" fill="#667085">分布 / 估计 / 检验</text>
+</svg>

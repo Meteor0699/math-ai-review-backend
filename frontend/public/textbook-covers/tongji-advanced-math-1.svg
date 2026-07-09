@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 500" role="img" aria-label="同济版高等数学上册封面卡片">
+  <rect width="360" height="500" rx="18" fill="#f7fbff"/>
+  <rect x="24" y="24" width="312" height="452" rx="14" fill="#ffffff" stroke="#1f6fbd" stroke-width="3"/>
+  <rect x="24" y="24" width="312" height="118" rx="14" fill="#1f6fbd"/>
+  <path d="M24 125 C88 88 150 176 214 126 S304 102 336 132 L336 174 L24 174 Z" fill="#7cc2ff" opacity=".8"/>
+  <text x="180" y="86" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="30" font-weight="700" fill="#fff">高等数学</text>
+  <text x="180" y="122" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="20" fill="#eaf5ff">同济版 · 上册</text>
+  <text x="180" y="232" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="58" font-weight="700" fill="#1f6fbd">上</text>
+  <text x="180" y="302" text-anchor="middle" font-family="Georgia, serif" font-size="36" fill="#23364d">lim · d/dx · ∫</text>
+  <text x="180" y="382" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="20" fill="#425466">函数 / 极限 / 微积分</text>
+  <text x="180" y="438" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial" font-size="17" fill="#637083">高等教育出版社参考</text>
+</svg>

@@ -1,53 +1,55 @@
 <template>
   <div class="home-page">
-    <!-- 顶部横幅 -->
-    <div class="hero-banner">
+    <section class="hero-banner">
       <div class="hero-content">
         <h1 class="hero-title">
-          <el-icon :size="36"><School /></el-icon>
+          <el-icon :size="34"><School /></el-icon>
           数学 AI 复习助手
         </h1>
         <p class="hero-desc">系统化复习 · 重点知识梳理 · AI 智能讲解 · 往年试题精练</p>
       </div>
-    </div>
+    </section>
 
-    <!-- 课程入口 -->
     <section class="section">
       <h2 class="section-title">
         <el-icon><Collection /></el-icon>
         课程选择
       </h2>
-      <p class="section-desc">选择你需要复习的课程，开始高效学习</p>
+      <p class="section-desc">选择你需要复习的课程，按教材与章节进入学习</p>
       <div class="course-grid" v-loading="courseLoading">
         <el-card
           v-for="course in courseList"
           :key="course.id"
           class="course-card"
           shadow="hover"
-          :body-style="{ padding: '28px 24px' }"
-          @click="$router.push(`/courses/${course.id}`)"
+          :body-style="{ padding: 0 }"
+          @click="router.push(`/courses/${course.id}`)"
         >
-          <div class="course-icon" :style="{ background: courseColors[course.id % 3] }">
-            <el-icon :size="28"><Notebook /></el-icon>
-          </div>
-          <div class="course-name">{{ course.courseName }}</div>
-          <div class="course-code">{{ course.courseCode }}</div>
-          <div class="course-desc">{{ course.courseDesc }}</div>
-          <div class="course-action">
-            <span>进入课程</span>
-            <el-icon><ArrowRight /></el-icon>
+          <img
+            v-if="getPrimaryCourseCover(course)"
+            class="course-cover"
+            :src="getPrimaryCourseCover(course)"
+            :alt="course.courseName"
+          />
+          <div class="course-content">
+            <div class="course-name">{{ course.courseName }}</div>
+            <div class="course-code">{{ course.courseCode }}</div>
+            <div class="course-desc">{{ course.courseDesc }}</div>
+            <div class="course-action">
+              <span>进入课程</span>
+              <el-icon><ArrowRight /></el-icon>
+            </div>
           </div>
         </el-card>
       </div>
     </section>
 
-    <!-- 功能入口 -->
     <section class="section">
       <h2 class="section-title">
         <el-icon><Menu /></el-icon>
         快捷功能
       </h2>
-      <p class="section-desc">快速进入常用功能模块</p>
+      <p class="section-desc">快速进入常用复习模块</p>
       <div class="feature-grid">
         <el-card
           v-for="item in featureList"
@@ -55,7 +57,7 @@
           class="feature-card"
           shadow="hover"
           :body-style="{ padding: '24px' }"
-          @click="$router.push(item.path)"
+          @click="router.push(item.path)"
         >
           <div class="feature-icon" :style="{ background: item.color }">
             <el-icon :size="24"><component :is="item.icon" /></el-icon>
@@ -72,14 +74,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCourseList } from '../../api/course'
+import { getPrimaryCourseCover } from '../../data/courseTextbooks'
 
 const router = useRouter()
-
-const courseColors = [
-  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-]
 
 const courseList = ref([])
 const courseLoading = ref(false)
@@ -90,28 +87,28 @@ const featureList = [
     desc: '查看课程核心知识点与公式',
     path: '/courses',
     icon: 'Reading',
-    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    color: 'linear-gradient(135deg, #2f80ed 0%, #56ccf2 100%)'
   },
   {
     name: '题库',
     desc: '按章节、难度筛选练习题目',
     path: '/questions',
     icon: 'Edit',
-    color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    color: 'linear-gradient(135deg, #27ae60 0%, #6fcf97 100%)'
   },
   {
     name: '往年试题',
-    desc: '浏览历年考试真题与解析',
+    desc: '浏览历年考试真题与文件',
     path: '/papers',
     icon: 'Document',
-    color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    color: 'linear-gradient(135deg, #f2994a 0%, #f2c94c 100%)'
   },
   {
     name: 'AI 讲解',
-    desc: 'AI 智能分析题目解题思路',
+    desc: '查看题目解析并继续追问',
     path: '/questions',
     icon: 'MagicStick',
-    color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    color: 'linear-gradient(135deg, #9b51e0 0%, #bb6bd9 100%)'
   }
 ]
 
@@ -121,7 +118,6 @@ onMounted(async () => {
     const res = await getCourseList({ page: 1, pageSize: 100 })
     courseList.value = res.data?.items || []
   } catch {
-    // 接口失败时展示默认课程
     courseList.value = []
   } finally {
     courseLoading.value = false
@@ -131,15 +127,14 @@ onMounted(async () => {
 
 <style scoped>
 .home-page {
-  max-width: 1100px;
+  max-width: 1120px;
   margin: 0 auto;
 }
 
-/* 顶部横幅 */
 .hero-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  padding: 48px 40px;
+  background: linear-gradient(135deg, #2f80ed 0%, #27ae60 100%);
+  border-radius: 8px;
+  padding: 44px 40px;
   margin-bottom: 40px;
   color: #fff;
 }
@@ -160,11 +155,9 @@ onMounted(async () => {
 
 .hero-desc {
   font-size: 15px;
-  opacity: 0.85;
-  letter-spacing: 1px;
+  opacity: 0.9;
 }
 
-/* 区块 */
 .section {
   margin-bottom: 36px;
 }
@@ -185,32 +178,34 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 
-/* 课程卡片 */
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
 .course-card {
   cursor: pointer;
+  overflow: hidden;
+  border-radius: 8px;
   transition: transform 0.25s, box-shadow 0.25s;
-  border-radius: 10px;
 }
 
 .course-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-5px);
 }
 
-.course-icon {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  color: #fff;
-  margin-bottom: 16px;
+.course-cover {
+  display: block;
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  background: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.course-content {
+  padding: 18px 20px 20px;
 }
 
 .course-name {
@@ -228,10 +223,10 @@ onMounted(async () => {
 
 .course-desc {
   font-size: 13px;
-  color: #909399;
+  color: #606266;
   line-height: 1.5;
   margin-bottom: 16px;
-  min-height: 36px;
+  min-height: 58px;
 }
 
 .course-action {
@@ -243,10 +238,9 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* 功能卡片 */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -254,7 +248,7 @@ onMounted(async () => {
   cursor: pointer;
   text-align: center;
   transition: transform 0.25s, box-shadow 0.25s;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .feature-card:hover {
@@ -267,7 +261,7 @@ onMounted(async () => {
   align-items: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: 8px;
   color: #fff;
   margin-bottom: 14px;
 }
@@ -285,17 +279,23 @@ onMounted(async () => {
   line-height: 1.4;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .course-grid {
+@media (max-width: 900px) {
+  .course-grid,
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .course-grid,
+  .feature-grid {
     grid-template-columns: 1fr;
   }
-  .feature-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+
   .hero-banner {
     padding: 32px 20px;
   }
+
   .hero-title {
     font-size: 22px;
   }
