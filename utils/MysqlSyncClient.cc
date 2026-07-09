@@ -257,7 +257,13 @@ MysqlPtr connect()
     const std::string sslMode = getenvString("DB_SSL_MODE", "DISABLED");
     if (sslMode == "REQUIRED" || sslMode == "PREFERRED")
     {
-        mysql_ssl_set(conn.get(), nullptr, nullptr, getenvString("DB_SSL_CA", "").c_str(), nullptr, nullptr);
+        const auto sslCa = getenvString("DB_SSL_CA");
+        mysql_ssl_set(conn.get(),
+                      nullptr,
+                      nullptr,
+                      sslCa.empty() ? nullptr : sslCa.c_str(),
+                      nullptr,
+                      nullptr);
         my_bool enforceSsl = 1;
         mysql_optionsv(conn.get(), MYSQL_OPT_SSL_ENFORCE, &enforceSsl);
     }
