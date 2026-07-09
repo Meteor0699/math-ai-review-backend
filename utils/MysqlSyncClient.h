@@ -36,6 +36,7 @@ class Error : public std::runtime_error
 };
 
 Result execute(const std::string &sql);
+Json::Value configSummary();
 std::string escape(const std::string &value);
 std::string quote(const std::string &value);
 std::string nullableString(const std::string &value);

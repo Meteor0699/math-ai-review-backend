@@ -4,6 +4,7 @@
 #include <mysql.h>
 
 #include <cstdlib>
+#include <cctype>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -14,13 +15,25 @@ namespace
 std::string getenvString(const char *name, const std::string &fallback = "")
 {
     const char *value = std::getenv(name);
-    return value ? std::string(value) : fallback;
+    if (!value)
+    {
+        return fallback;
+    }
+
+    std::string text(value);
+    const auto first = text.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos)
+    {
+        return "";
+    }
+    const auto last = text.find_last_not_of(" \t\r\n");
+    return text.substr(first, last - first + 1);
 }
 
 unsigned int getenvUInt(const char *name, unsigned int fallback)
 {
-    const char *value = std::getenv(name);
-    if (!value || !value[0])
+    const auto value = getenvString(name);
+    if (value.empty())
     {
         return fallback;
     }
@@ -272,6 +285,19 @@ MysqlPtr connect()
 }
 
 } // namespace
+
+Json::Value configSummary()
+{
+    const auto config = loadConfig();
+    Json::Value data;
+    data["host"] = config.host;
+    data["port"] = config.port;
+    data["database"] = config.dbname;
+    data["user"] = config.user;
+    data["sslMode"] = getenvString("DB_SSL_MODE", "DISABLED");
+    data["hasPassword"] = !config.password.empty();
+    return data;
+}
 
 bool Row::isNull(const std::string &field) const
 {

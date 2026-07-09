@@ -42,6 +42,7 @@ void HealthController::db(const drogon::HttpRequestPtr &,
 {
     Json::Value data;
     data["env"] = envStatus();
+    data["config"] = mathai::utils::mysql::configSummary();
 
     try
     {
