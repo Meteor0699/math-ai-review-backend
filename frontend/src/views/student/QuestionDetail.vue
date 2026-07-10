@@ -27,12 +27,32 @@
         <div class="content" v-html="question.content"></div>
         <el-divider />
 
-        <h4>标准答案</h4>
-        <div class="answer" v-html="question.standardAnswer"></div>
-        <el-divider />
+        <div class="answer-toggle">
+          <div>
+            <h4>{{ showAnswer ? '答案与解析' : '完成思考后再核对答案' }}</h4>
+            <p v-if="!showAnswer">答案和普通解析默认隐藏，由你决定何时查看。</p>
+          </div>
+          <el-button
+            :type="showAnswer ? 'default' : 'primary'"
+            :plain="showAnswer"
+            :aria-expanded="showAnswer"
+            @click="showAnswer = !showAnswer"
+          >
+            <el-icon><Hide v-if="showAnswer" /><View v-else /></el-icon>
+            {{ showAnswer ? '收起答案与解析' : '查看答案与解析' }}
+          </el-button>
+        </div>
 
-        <h4>普通解析</h4>
-        <div class="explanation" v-html="question.normalExplanation"></div>
+        <el-collapse-transition>
+          <div v-if="showAnswer" class="answer-panel">
+            <h4>标准答案</h4>
+            <div class="answer" v-html="question.standardAnswer"></div>
+            <el-divider />
+
+            <h4>普通解析</h4>
+            <div class="explanation" v-html="question.normalExplanation || '暂无普通解析'"></div>
+          </div>
+        </el-collapse-transition>
         <el-divider />
 
         <div class="study-actions">
@@ -107,7 +127,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, Hide, View } from '@element-plus/icons-vue'
 import {
   addWrongQuestion,
   askAiFollowUp,
@@ -126,6 +146,7 @@ const aiExplanation = ref('')
 const aiCached = ref(null)
 const followUpQuestion = ref('')
 const followUps = ref([])
+const showAnswer = ref(false)
 const studyState = ref({ status: 'none', isWrong: false })
 const loading = ref(false)
 const aiLoading = ref(false)
@@ -228,6 +249,20 @@ async function submitFollowUp() {
 .detail-card h3 { font-size: 18px; margin-bottom: 12px; }
 .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .content, .answer, .explanation, .ai-panel { font-size: 14px; line-height: 1.8; color: #303133; }
+.answer-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 6px;
+  background: #f8fbff;
+}
+.answer-toggle h4 { margin: 0; color: #1f2937; }
+.answer-toggle p { margin: 5px 0 0; font-size: 13px; color: #6b7280; }
+.answer-panel { padding: 18px 4px 2px; }
+.answer-panel h4 { margin: 0 0 10px; }
 .study-actions, .ai-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 .cache-hint { font-size: 13px; color: #6b7280; }
 .ai-panel { margin-top: 16px; }
@@ -245,5 +280,10 @@ async function submitFollowUp() {
   border-radius: 4px;
   background: #f4f6f8;
   color: #606266;
+}
+
+@media (max-width: 640px) {
+  .answer-toggle { align-items: stretch; flex-direction: column; }
+  .answer-toggle .el-button { width: 100%; }
 }
 </style>
