@@ -13,7 +13,9 @@ class QuestionController : public drogon::HttpController<QuestionController>
     ADD_METHOD_TO(QuestionController::listAdmin, "/api/admin/questions", drogon::Get, "AdminAuthFilter");
     ADD_METHOD_TO(QuestionController::detail, "/api/questions/{1}", drogon::Get);
     ADD_METHOD_TO(QuestionController::detail, "/api/v1/questions/{1}", drogon::Get);
-    ADD_METHOD_TO(QuestionController::detail, "/api/admin/questions/{1}", drogon::Get, "AdminAuthFilter");
+    ADD_METHOD_TO(QuestionController::answer, "/api/questions/{1}/answer", drogon::Get, "UserAuthFilter");
+    ADD_METHOD_TO(QuestionController::answer, "/api/v1/questions/{1}/answer", drogon::Get, "UserAuthFilter");
+    ADD_METHOD_TO(QuestionController::adminDetail, "/api/admin/questions/{1}", drogon::Get, "AdminAuthFilter");
     ADD_METHOD_TO(QuestionController::create, "/api/admin/questions", drogon::Post, "AdminAuthFilter");
     ADD_METHOD_TO(QuestionController::update, "/api/admin/questions/{1}", drogon::Put, "AdminAuthFilter");
     ADD_METHOD_TO(QuestionController::disable, "/api/admin/questions/{1}", drogon::Delete, "AdminAuthFilter");
@@ -31,6 +33,14 @@ class QuestionController : public drogon::HttpController<QuestionController>
     void detail(const drogon::HttpRequestPtr &request,
                 std::function<void(const drogon::HttpResponsePtr &)> &&callback,
                 long long questionId);
+
+    void answer(const drogon::HttpRequestPtr &request,
+                std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                long long questionId);
+
+    void adminDetail(const drogon::HttpRequestPtr &request,
+                     std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                     long long questionId);
 
     void create(const drogon::HttpRequestPtr &request,
                 std::function<void(const drogon::HttpResponsePtr &)> &&callback);

@@ -24,7 +24,7 @@
           <el-tag v-else-if="studyState.status === 'viewed'" type="info">已学习</el-tag>
         </div>
 
-        <div class="content" v-html="question.content"></div>
+        <div class="content rich-answer" v-html="renderedQuestionContent"></div>
         <el-divider />
 
         <div class="answer-toggle">
@@ -36,7 +36,8 @@
             :type="showAnswer ? 'default' : 'primary'"
             :plain="showAnswer"
             :aria-expanded="showAnswer"
-            @click="showAnswer = !showAnswer"
+            :loading="answerLoading"
+            @click="toggleAnswer"
           >
             <el-icon><Hide v-if="showAnswer" /><View v-else /></el-icon>
             {{ showAnswer ? '收起答案与解析' : '查看答案与解析' }}
@@ -46,11 +47,11 @@
         <el-collapse-transition>
           <div v-if="showAnswer" class="answer-panel">
             <h4>标准答案</h4>
-            <div class="answer" v-html="question.standardAnswer"></div>
+            <div class="answer rich-answer" v-html="renderedStandardAnswer"></div>
             <el-divider />
 
             <h4>普通解析</h4>
-            <div class="explanation" v-html="question.normalExplanation || '暂无普通解析'"></div>
+            <div class="explanation rich-answer" v-html="renderedNormalExplanation"></div>
           </div>
         </el-collapse-transition>
         <el-divider />
@@ -132,6 +133,7 @@ import {
   addWrongQuestion,
   askAiFollowUp,
   getAiExplanation,
+  getQuestionAnswer,
   getQuestionDetail,
   getStudyState,
   recordQuestionStudy,
@@ -142,6 +144,7 @@ import { renderMathContent } from '../../utils/renderMathContent'
 const route = useRoute()
 const questionId = route.params.questionId
 const question = ref(null)
+const answerData = ref(null)
 const aiExplanation = ref('')
 const aiCached = ref(null)
 const followUpQuestion = ref('')
@@ -150,10 +153,16 @@ const showAnswer = ref(false)
 const studyState = ref({ status: 'none', isWrong: false })
 const loading = ref(false)
 const aiLoading = ref(false)
+const answerLoading = ref(false)
 const followUpLoading = ref(false)
 const studyLoading = ref(false)
 const wrongLoading = ref(false)
 const renderedAiExplanation = computed(() => renderMathContent(aiExplanation.value))
+const renderedQuestionContent = computed(() => renderMathContent(question.value?.content || ''))
+const renderedStandardAnswer = computed(() => renderMathContent(answerData.value?.standardAnswer || ''))
+const renderedNormalExplanation = computed(() =>
+  renderMathContent(answerData.value?.normalExplanation || '暂无普通解析')
+)
 
 onMounted(async () => {
   loading.value = true
@@ -171,6 +180,24 @@ function difficultyTagType(difficulty) {
   if (difficulty === 'hard' || difficulty === '较难') return 'danger'
   if (difficulty === 'medium' || difficulty === '中等') return 'warning'
   return 'success'
+}
+
+async function toggleAnswer() {
+  if (showAnswer.value) {
+    showAnswer.value = false
+    return
+  }
+
+  if (!answerData.value) {
+    answerLoading.value = true
+    try {
+      const res = await getQuestionAnswer(questionId)
+      answerData.value = res.data
+    } finally {
+      answerLoading.value = false
+    }
+  }
+  showAnswer.value = true
 }
 
 async function loadStudyState() {

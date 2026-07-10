@@ -72,14 +72,17 @@ Json::Value questionRowToJson(const mathai::utils::mysql::Row &row, bool include
     return item;
 }
 
-Json::Value optionRowToJson(const mathai::utils::mysql::Row &row)
+Json::Value optionRowToJson(const mathai::utils::mysql::Row &row, bool includeCorrect)
 {
     Json::Value item;
     item["id"] = Json::Int64(row.getInt64("id"));
     item["questionId"] = Json::Int64(row.getInt64("question_id"));
     item["optionLabel"] = row.getString("option_label");
     item["optionContent"] = row.getString("option_content");
-    item["isCorrect"] = row.getInt("is_correct");
+    if (includeCorrect)
+    {
+        item["isCorrect"] = row.getInt("is_correct");
+    }
     item["sortOrder"] = row.getInt("sort_order");
     return item;
 }
@@ -190,7 +193,7 @@ void QuestionDao::listAdmin(const drogon::HttpRequestPtr &request, int page, int
         Json::Value items(Json::arrayValue);
         for (const auto &row : result.rows)
         {
-            auto item = questionRowToJson(row, false);
+            auto item = questionRowToJson(row, true);
             item["courseName"] = row.getString("course_name");
             item["chapterName"] = row.getString("chapter_name");
             items.append(item);
@@ -212,12 +215,43 @@ void QuestionDao::findActiveById(long long id, JsonCallback onSuccess, ErrorCall
             "standard_answer, normal_explanation, source, source_year, from_exam_paper, paper_question_no, sort_order, status "
             "FROM question WHERE id = " + std::to_string(id) + " AND status = 1 LIMIT 1");
         if (result.rows.empty()) { onSuccess(Json::Value(Json::nullValue)); return; }
+        onSuccess(questionRowToJson(result.rows[0], false));
+    }
+    catch (const std::exception &exception) { onError(exception.what()); }
+}
+
+void QuestionDao::findAdminById(long long id, JsonCallback onSuccess, ErrorCallback onError) const
+{
+    try
+    {
+        const auto result = mathai::utils::mysql::execute(
+            "SELECT id, course_id, chapter_id, knowledge_point_id, exam_paper_id, title, content, question_type, difficulty, "
+            "standard_answer, normal_explanation, source, source_year, from_exam_paper, paper_question_no, sort_order, status "
+            "FROM question WHERE id = " + std::to_string(id) + " LIMIT 1");
+        if (result.rows.empty()) { onSuccess(Json::Value(Json::nullValue)); return; }
         onSuccess(questionRowToJson(result.rows[0], true));
     }
     catch (const std::exception &exception) { onError(exception.what()); }
 }
 
-void QuestionDao::listOptions(long long questionId, JsonCallback onSuccess, ErrorCallback onError) const
+void QuestionDao::findAnswerById(long long id, JsonCallback onSuccess, ErrorCallback onError) const
+{
+    try
+    {
+        const auto result = mathai::utils::mysql::execute(
+            "SELECT standard_answer, normal_explanation FROM question WHERE id = " +
+            std::to_string(id) + " AND status = 1 LIMIT 1");
+        if (result.rows.empty()) { onSuccess(Json::Value(Json::nullValue)); return; }
+
+        Json::Value answer;
+        answer["standardAnswer"] = result.rows[0].getString("standard_answer");
+        answer["normalExplanation"] = result.rows[0].getString("normal_explanation");
+        onSuccess(answer);
+    }
+    catch (const std::exception &exception) { onError(exception.what()); }
+}
+
+void QuestionDao::listOptions(long long questionId, bool includeCorrect, JsonCallback onSuccess, ErrorCallback onError) const
 {
     try
     {
@@ -225,7 +259,7 @@ void QuestionDao::listOptions(long long questionId, JsonCallback onSuccess, Erro
             "SELECT id, question_id, option_label, option_content, is_correct, sort_order FROM question_option WHERE question_id = " +
             std::to_string(questionId) + " ORDER BY sort_order ASC, id ASC");
         Json::Value items(Json::arrayValue);
-        for (const auto &row : result.rows) items.append(optionRowToJson(row));
+        for (const auto &row : result.rows) items.append(optionRowToJson(row, includeCorrect));
         onSuccess(items);
     }
     catch (const std::exception &exception) { onError(exception.what()); }

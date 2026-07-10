@@ -178,7 +178,7 @@ void QuestionService::listAdmin(const drogon::HttpRequestPtr &request, int page,
         });
 }
 
-void QuestionService::detail(long long id, ResponseCallback callback) const
+void QuestionService::studentDetail(long long id, ResponseCallback callback) const
 {
     auto cb = std::make_shared<ResponseCallback>(std::move(callback));
     questionDao_.findActiveById(
@@ -193,7 +193,7 @@ void QuestionService::detail(long long id, ResponseCallback callback) const
             }
 
             questionDao_.listOptions(
-                id,
+                id, false,
                 [cb, question](Json::Value options) mutable {
                     question["options"] = options;
                     (*cb)(mathai::utils::jsonResponse(200, "success", question));
@@ -205,6 +205,56 @@ void QuestionService::detail(long long id, ResponseCallback callback) const
         [cb](const std::string &message) {
             databaseError(cb, message);
         });
+}
+
+void QuestionService::adminDetail(long long id, ResponseCallback callback) const
+{
+    auto cb = std::make_shared<ResponseCallback>(std::move(callback));
+    questionDao_.findAdminById(
+        id,
+        [this, id, cb](Json::Value question) {
+            if (question.isNull())
+            {
+                (*cb)(mathai::utils::jsonResponse(404, "question not found",
+                                                  Json::Value(Json::objectValue),
+                                                  drogon::k404NotFound));
+                return;
+            }
+
+            questionDao_.listOptions(
+                id, true,
+                [cb, question](Json::Value options) mutable {
+                    question["options"] = options;
+                    (*cb)(mathai::utils::jsonResponse(200, "success", question));
+                },
+                [cb](const std::string &message) { databaseError(cb, message); });
+        },
+        [cb](const std::string &message) { databaseError(cb, message); });
+}
+
+void QuestionService::answer(long long id, ResponseCallback callback) const
+{
+    auto cb = std::make_shared<ResponseCallback>(std::move(callback));
+    questionDao_.findAnswerById(
+        id,
+        [this, id, cb](Json::Value answer) {
+            if (answer.isNull())
+            {
+                (*cb)(mathai::utils::jsonResponse(404, "question not found",
+                                                  Json::Value(Json::objectValue),
+                                                  drogon::k404NotFound));
+                return;
+            }
+
+            questionDao_.listOptions(
+                id, true,
+                [cb, answer](Json::Value options) mutable {
+                    answer["options"] = options;
+                    (*cb)(mathai::utils::jsonResponse(200, "success", answer));
+                },
+                [cb](const std::string &message) { databaseError(cb, message); });
+        },
+        [cb](const std::string &message) { databaseError(cb, message); });
 }
 
 void QuestionService::create(const Json::Value &requestBody, ResponseCallback callback) const

@@ -17,7 +17,9 @@ class QuestionService
 
     void list(const drogon::HttpRequestPtr &request, int page, int pageSize, ResponseCallback callback) const;
     void listAdmin(const drogon::HttpRequestPtr &request, int page, int pageSize, ResponseCallback callback) const;
-    void detail(long long id, ResponseCallback callback) const;
+    void studentDetail(long long id, ResponseCallback callback) const;
+    void adminDetail(long long id, ResponseCallback callback) const;
+    void answer(long long id, ResponseCallback callback) const;
     void create(const Json::Value &requestBody, ResponseCallback callback) const;
     void update(long long id, const Json::Value &requestBody, ResponseCallback callback) const;
     void disable(long long id, ResponseCallback callback) const;

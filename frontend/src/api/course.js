@@ -46,6 +46,13 @@ export function getQuestionDetail(questionId) {
   })
 }
 
+export function getQuestionAnswer(questionId) {
+  return request({
+    url: `/questions/${questionId}/answer`,
+    method: 'get'
+  })
+}
+
 export function getAiExplanation(questionId) {
   return request({
     url: `/questions/${questionId}/ai-explanation`,

@@ -59,7 +59,21 @@ void QuestionController::detail(const drogon::HttpRequestPtr &,
                                 std::function<void(const drogon::HttpResponsePtr &)> &&callback,
                                 long long questionId)
 {
-    questionService_.detail(questionId, std::move(callback));
+    questionService_.studentDetail(questionId, std::move(callback));
+}
+
+void QuestionController::answer(const drogon::HttpRequestPtr &,
+                                std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                                long long questionId)
+{
+    questionService_.answer(questionId, std::move(callback));
+}
+
+void QuestionController::adminDetail(const drogon::HttpRequestPtr &,
+                                     std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                                     long long questionId)
+{
+    questionService_.adminDetail(questionId, std::move(callback));
 }
 
 void QuestionController::create(const drogon::HttpRequestPtr &request,

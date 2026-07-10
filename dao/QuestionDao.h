@@ -20,7 +20,9 @@ class QuestionDao
     void listActive(const drogon::HttpRequestPtr &request, int page, int pageSize, JsonCallback onSuccess, ErrorCallback onError) const;
     void listAdmin(const drogon::HttpRequestPtr &request, int page, int pageSize, JsonCallback onSuccess, ErrorCallback onError) const;
     void findActiveById(long long id, JsonCallback onSuccess, ErrorCallback onError) const;
-    void listOptions(long long questionId, JsonCallback onSuccess, ErrorCallback onError) const;
+    void findAdminById(long long id, JsonCallback onSuccess, ErrorCallback onError) const;
+    void findAnswerById(long long id, JsonCallback onSuccess, ErrorCallback onError) const;
+    void listOptions(long long questionId, bool includeCorrect, JsonCallback onSuccess, ErrorCallback onError) const;
     void create(const Json::Value &question, JsonCallback onSuccess, ErrorCallback onError) const;
     void update(long long id, const Json::Value &question, CountCallback onSuccess, ErrorCallback onError) const;
     void disable(long long id, CountCallback onSuccess, ErrorCallback onError) const;
