@@ -11,6 +11,18 @@ namespace mathai::utils
 
 void registerErrorHandlers()
 {
+    drogon::app().registerPostHandlingAdvice(
+        [](const drogon::HttpRequestPtr &, const drogon::HttpResponsePtr &response) {
+            response->addHeader("Content-Security-Policy",
+                                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                                "font-src 'self' data:; img-src 'self' data: https:; connect-src 'self' https:; "
+                                "object-src 'none'; base-uri 'self'; frame-ancestors 'none'");
+            response->addHeader("X-Content-Type-Options", "nosniff");
+            response->addHeader("X-Frame-Options", "DENY");
+            response->addHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+            response->addHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        });
+
     drogon::app().setExceptionHandler(
         [](const std::exception &exception,
            const drogon::HttpRequestPtr &,
