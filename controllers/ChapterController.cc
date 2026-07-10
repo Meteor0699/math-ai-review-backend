@@ -1,6 +1,7 @@
 #include "controllers/ChapterController.h"
 
 #include "utils/JsonResponse.h"
+#include "utils/RequestValidation.h"
 
 namespace
 {
@@ -34,6 +35,11 @@ void ChapterController::listByCourse(const drogon::HttpRequestPtr &request,
 void ChapterController::listAll(const drogon::HttpRequestPtr &request,
                                 std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
+    if (!mathai::utils::validOptionalIntegerParameter(request, "courseId", 1, INT64_MAX))
+    {
+        callback(mathai::utils::error(400, "invalid courseId", drogon::k400BadRequest));
+        return;
+    }
     const auto p = mathai::utils::parsePagination(request);
     chapterService_.listAll(request, p.page, p.pageSize, std::move(callback));
 }

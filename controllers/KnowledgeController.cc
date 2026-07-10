@@ -1,6 +1,7 @@
 #include "controllers/KnowledgeController.h"
 
 #include "utils/JsonResponse.h"
+#include "utils/RequestValidation.h"
 
 namespace
 {
@@ -34,6 +35,12 @@ void KnowledgeController::listByChapter(const drogon::HttpRequestPtr &request,
 void KnowledgeController::listAll(const drogon::HttpRequestPtr &request,
                                   std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
+    if (!mathai::utils::validOptionalIntegerParameter(request, "courseId", 1, INT64_MAX) ||
+        !mathai::utils::validOptionalIntegerParameter(request, "chapterId", 1, INT64_MAX))
+    {
+        callback(mathai::utils::error(400, "invalid courseId or chapterId", drogon::k400BadRequest));
+        return;
+    }
     const auto p = mathai::utils::parsePagination(request);
     knowledgeService_.listAll(request, p.page, p.pageSize, std::move(callback));
 }

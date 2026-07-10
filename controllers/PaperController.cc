@@ -14,6 +14,7 @@
 #include "utils/JsonResponse.h"
 #include "utils/JwtUtil.h"
 #include "utils/MysqlSyncClient.h"
+#include "utils/RequestValidation.h"
 
 namespace
 {
@@ -181,10 +182,22 @@ void PaperController::list(const drogon::HttpRequestPtr &request,
             whereClause << " AND ep.visibility = 'public'";
         }
         const auto courseId = request->getParameter("courseId");
-        if (!courseId.empty()) whereClause << " AND ep.course_id = " << std::stoll(courseId);
+        const auto parsedCourseId = mathai::utils::parseInteger(courseId, 1, INT64_MAX);
+        if (!courseId.empty() && !parsedCourseId)
+        {
+            callback(mathai::utils::error(400, "invalid courseId", drogon::k400BadRequest));
+            return;
+        }
+        if (parsedCourseId) whereClause << " AND ep.course_id = " << *parsedCourseId;
         const auto examYear = request->getParameter("examYear");
         const auto year = examYear.empty() ? request->getParameter("year") : examYear;
-        if (!year.empty()) whereClause << " AND ep.exam_year = " << std::stoi(year);
+        const auto parsedYear = mathai::utils::parseInteger(year, 1900, 2155);
+        if (!year.empty() && !parsedYear)
+        {
+            callback(mathai::utils::error(400, "invalid examYear", drogon::k400BadRequest));
+            return;
+        }
+        if (parsedYear) whereClause << " AND ep.exam_year = " << *parsedYear;
         const auto whereStr = whereClause.str();
         const auto countResult = mathai::utils::mysql::execute("SELECT COUNT(*) AS total FROM exam_paper ep" + whereStr);
         const auto total = static_cast<Json::UInt64>(countResult.rows[0].getInt64("total"));
@@ -359,6 +372,13 @@ void PaperController::upload(const drogon::HttpRequestPtr &request,
         callback(mathai::utils::jsonResponse(400, "courseId and title are required", Json::Value(Json::objectValue), drogon::k400BadRequest));
         return;
     }
+    const auto parsedCourseId = mathai::utils::parseInteger(courseId, 1, INT64_MAX);
+    const auto parsedYear = mathai::utils::parseInteger(year, 1900, 2155);
+    if (!parsedCourseId || (!year.empty() && !parsedYear))
+    {
+        callback(mathai::utils::error(400, "invalid courseId or examYear", drogon::k400BadRequest));
+        return;
+    }
 
     const auto uploadDir = drogon::app().getCustomConfig().get("upload_dir", "./uploads/papers").asString();
     auto filePath = uploadDir + "/" + storedFilename;
@@ -369,14 +389,14 @@ void PaperController::upload(const drogon::HttpRequestPtr &request,
     const auto fileSize = file.fileLength();
     const auto ownerUserId = studentUpload ? claims->userId : 0;
     const auto insertPaper =
-        [courseId, title, year, originalFilename, storedFilename, filePath, fileSize, ext, ownerUserId, visibility,
+        [courseId = *parsedCourseId, year = parsedYear, title, originalFilename, storedFilename, filePath, fileSize, ext, ownerUserId, visibility,
          studentUpload, responseCallback](const std::string &reviewStatus, const std::string &reviewComment) {
             try
             {
                 const auto result = mathai::utils::mysql::execute(
                     "INSERT INTO exam_paper (course_id, title, exam_year, original_filename, stored_filename, file_path, file_size, file_type, owner_user_id, visibility, ai_review_status, ai_review_comment) VALUES (" +
-                    std::to_string(std::stoll(courseId)) + ", " + quote(title) + ", " +
-                    (year.empty() ? "NULL" : std::to_string(std::stoi(year))) + ", " + quote(originalFilename) + ", " +
+                    std::to_string(courseId) + ", " + quote(title) + ", " +
+                    (year ? std::to_string(*year) : "NULL") + ", " + quote(originalFilename) + ", " +
                     quote(storedFilename) + ", " + quote(filePath) + ", " + std::to_string(fileSize) + ", " + quote(ext) + ", " +
                     (studentUpload ? std::to_string(ownerUserId) : std::string("NULL")) + ", " + quote(visibility) + ", " +
                     quote(reviewStatus) + ", " + quote(reviewComment.substr(0, 1000)) + ")");

@@ -7,7 +7,7 @@ void AuthController::login(const drogon::HttpRequestPtr &request,
                            std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
     const auto json = request->getJsonObject();
-    if (!json || !json->isMember("username") || !json->isMember("password"))
+    if (!json || !(*json)["username"].isString() || !(*json)["password"].isString())
     {
         callback(mathai::utils::jsonResponse(400, "invalid request body",
                                              Json::Value(Json::objectValue),

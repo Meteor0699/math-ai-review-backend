@@ -1,6 +1,7 @@
 #include "controllers/QuestionController.h"
 
 #include "utils/JsonResponse.h"
+#include "utils/RequestValidation.h"
 
 namespace
 {
@@ -21,11 +22,23 @@ bool requireJsonBody(const drogon::HttpRequestPtr &request,
     return true;
 }
 
+bool validQuestionFilters(const drogon::HttpRequestPtr &request)
+{
+    return mathai::utils::validOptionalIntegerParameter(request, "courseId", 1, INT64_MAX) &&
+           mathai::utils::validOptionalIntegerParameter(request, "chapterId", 1, INT64_MAX) &&
+           mathai::utils::validOptionalIntegerParameter(request, "year", 1900, 2155);
+}
+
 } // namespace
 
 void QuestionController::list(const drogon::HttpRequestPtr &request,
                               std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
+    if (!validQuestionFilters(request))
+    {
+        callback(mathai::utils::error(400, "invalid question filter", drogon::k400BadRequest));
+        return;
+    }
     const auto p = mathai::utils::parsePagination(request);
     questionService_.list(request, p.page, p.pageSize, std::move(callback));
 }
@@ -33,6 +46,11 @@ void QuestionController::list(const drogon::HttpRequestPtr &request,
 void QuestionController::listAdmin(const drogon::HttpRequestPtr &request,
                                    std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
+    if (!validQuestionFilters(request))
+    {
+        callback(mathai::utils::error(400, "invalid question filter", drogon::k400BadRequest));
+        return;
+    }
     const auto p = mathai::utils::parsePagination(request);
     questionService_.listAdmin(request, p.page, p.pageSize, std::move(callback));
 }
