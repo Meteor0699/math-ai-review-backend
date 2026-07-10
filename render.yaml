@@ -33,6 +33,8 @@ services:
         value: REQUIRED
       - key: DB_POOL_SIZE
         value: 8
+      - key: DB_POOL_ACQUIRE_TIMEOUT_MS
+        value: 3000
 
   # 前端服务（静态站点）
   - type: web

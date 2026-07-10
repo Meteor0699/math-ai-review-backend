@@ -4,6 +4,7 @@
 #include <mysql.h>
 
 #include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <cstdlib>
 #include <cctype>
@@ -336,7 +337,9 @@ class ConnectionPool
 {
   public:
     ConnectionPool()
-        : maximumSize_(std::clamp<std::size_t>(getenvUInt("DB_POOL_SIZE", 8), 1, 64))
+        : maximumSize_(std::clamp<std::size_t>(getenvUInt("DB_POOL_SIZE", 8), 1, 64)),
+          acquireTimeout_(std::chrono::milliseconds(
+              std::clamp<std::size_t>(getenvUInt("DB_POOL_ACQUIRE_TIMEOUT_MS", 3000), 100, 30000)))
     {
     }
 
@@ -356,7 +359,11 @@ class ConnectionPool
             bool createNew = false;
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                available_.wait(lock, [this] { return !idle_.empty() || total_ < maximumSize_; });
+                if (!available_.wait_for(lock, acquireTimeout_,
+                                         [this] { return !idle_.empty() || total_ < maximumSize_; }))
+                {
+                    throw mathai::utils::mysql::Error("database connection pool exhausted");
+                }
                 if (!idle_.empty())
                 {
                     connection = idle_.back();
@@ -421,6 +428,7 @@ class ConnectionPool
     std::vector<MYSQL *> idle_;
     std::size_t total_{0};
     std::size_t maximumSize_;
+    std::chrono::milliseconds acquireTimeout_;
 };
 
 ConnectionLease::~ConnectionLease()
