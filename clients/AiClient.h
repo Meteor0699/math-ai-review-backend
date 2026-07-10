@@ -13,6 +13,7 @@ struct AiResult
     std::string content;
     std::string errorMessage;
     std::string modelName;
+    bool busy{};
 };
 
 class AiClient

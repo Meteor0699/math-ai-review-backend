@@ -15,6 +15,10 @@ services:
         sync: false
       - key: AI_MODEL
         sync: false
+      - key: AI_MAX_CONCURRENCY
+        value: 4
+      - key: AI_QUEUE_SIZE
+        value: 32
       - key: DB_HOST
         sync: false
       - key: DB_PORT
