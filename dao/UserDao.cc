@@ -2,6 +2,7 @@
 
 #include <drogon/drogon.h>
 #include <sstream>
+#include <vector>
 
 #include "utils/MysqlSyncClient.h"
 
@@ -43,7 +44,7 @@ void UserDao::findByUsername(const std::string &username,
     try
     {
         const auto result = mathai::utils::mysql::execute(
-            "SELECT id, username, password_hash, real_name, student_no, role, status "
+            "SELECT id, username, password_hash, real_name, student_no, role, status, auth_version "
             "FROM user WHERE username = " + mathai::utils::mysql::quote(username) + " LIMIT 1");
         if (result.rows.empty())
         {
@@ -60,6 +61,7 @@ void UserDao::findByUsername(const std::string &username,
         user.studentNo = row.getString("student_no");
         user.role = row.getString("role");
         user.status = row.getInt("status");
+        user.authVersion = row.getInt("auth_version", 1);
         onSuccess(user);
     }
     catch (const std::exception &exception)
@@ -145,13 +147,48 @@ void UserDao::update(long long id,
 {
     try
     {
-        const auto result = mathai::utils::mysql::execute(
-            "UPDATE user SET real_name = " + nullableText(user.get("realName", Json::Value(Json::nullValue))) +
-            ", student_no = " + nullableText(user.get("studentNo", Json::Value(Json::nullValue))) +
-            ", role = " + mathai::utils::mysql::quote(user.get("role", "student").asString()) +
-            ", status = " + std::to_string(user.get("status", 1).asInt()) +
-            " WHERE id = " + std::to_string(id));
-        onSuccess(result.affectedRows);
+        std::vector<std::string> assignments;
+        bool invalidateSessions = false;
+        if (user.isMember("realName"))
+        {
+            assignments.push_back("real_name = " + nullableText(user["realName"]));
+        }
+        if (user.isMember("studentNo"))
+        {
+            assignments.push_back("student_no = " + nullableText(user["studentNo"]));
+        }
+        if (user.isMember("role"))
+        {
+            assignments.push_back("role = " + mathai::utils::mysql::quote(user["role"].asString()));
+            invalidateSessions = true;
+        }
+        if (user.isMember("status"))
+        {
+            assignments.push_back("status = " + std::to_string(user["status"].asInt()));
+            invalidateSessions = true;
+        }
+        if (invalidateSessions)
+        {
+            assignments.push_back("auth_version = auth_version + 1");
+        }
+
+        std::ostringstream sql;
+        sql << "UPDATE user SET ";
+        for (std::size_t index = 0; index < assignments.size(); ++index)
+        {
+            if (index > 0) sql << ", ";
+            sql << assignments[index];
+        }
+        sql << " WHERE id = " << id;
+        const auto result = mathai::utils::mysql::execute(sql.str());
+        if (result.affectedRows > 0)
+        {
+            onSuccess(result.affectedRows);
+            return;
+        }
+        const auto existing = mathai::utils::mysql::execute(
+            "SELECT 1 AS found FROM user WHERE id = " + std::to_string(id) + " LIMIT 1");
+        onSuccess(existing.rows.empty() ? 0 : 1);
     }
     catch (const std::exception &exception)
     {
@@ -168,8 +205,41 @@ void UserDao::updatePassword(long long id,
     {
         const auto result = mathai::utils::mysql::execute(
             "UPDATE user SET password_hash = " + mathai::utils::mysql::quote(passwordHash) +
+            ", auth_version = auth_version + 1" +
             " WHERE id = " + std::to_string(id));
         onSuccess(result.affectedRows);
+    }
+    catch (const std::exception &exception)
+    {
+        onError(exception.what());
+    }
+}
+
+void UserDao::recordSuccessfulLogin(long long id,
+                                    int authVersion,
+                                    const std::string &upgradedPasswordHash,
+                                    CountCallback onSuccess,
+                                    ErrorCallback onError) const
+{
+    try
+    {
+        auto sql = std::string("UPDATE user SET last_login_at = CURRENT_TIMESTAMP");
+        if (!upgradedPasswordHash.empty())
+        {
+            sql += ", password_hash = " + mathai::utils::mysql::quote(upgradedPasswordHash);
+        }
+        sql += " WHERE id = " + std::to_string(id) +
+               " AND status = 1 AND auth_version = " + std::to_string(authVersion);
+        const auto result = mathai::utils::mysql::execute(sql);
+        if (result.affectedRows > 0)
+        {
+            onSuccess(result.affectedRows);
+            return;
+        }
+        const auto existing = mathai::utils::mysql::execute(
+            "SELECT 1 AS found FROM user WHERE id = " + std::to_string(id) +
+            " AND status = 1 AND auth_version = " + std::to_string(authVersion) + " LIMIT 1");
+        onSuccess(existing.rows.empty() ? 0 : 1);
     }
     catch (const std::exception &exception)
     {
@@ -184,7 +254,7 @@ void UserDao::disable(long long id,
     try
     {
         const auto result = mathai::utils::mysql::execute(
-            "UPDATE user SET status = 0 WHERE id = " + std::to_string(id));
+            "UPDATE user SET status = 0, auth_version = auth_version + 1 WHERE id = " + std::to_string(id));
         onSuccess(result.affectedRows);
     }
     catch (const std::exception &exception)

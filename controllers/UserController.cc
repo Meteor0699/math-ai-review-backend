@@ -1,6 +1,5 @@
 #include "controllers/UserController.h"
 
-#include <ctime>
 #include <memory>
 
 #include "utils/JsonResponse.h"
@@ -16,13 +15,35 @@ bool hasTextField(const Json::Value &body, const char *field)
 
 bool validRole(const Json::Value &body)
 {
+    if (body.isMember("role") && !body["role"].isString()) return false;
     const auto role = body.get("role", "student").asString();
     return role == "student" || role == "admin";
 }
 
-std::string makeSalt(const std::string &seed)
+bool validStatus(const Json::Value &body)
 {
-    return mathai::utils::sha256Hex(seed + ":" + std::to_string(std::time(nullptr))).substr(0, 16);
+    if (!body.isMember("status")) return true;
+    return body["status"].isIntegral() &&
+           (body["status"].asInt() == 0 || body["status"].asInt() == 1);
+}
+
+bool validProfileFields(const Json::Value &body)
+{
+    for (const auto *field : {"realName", "studentNo"})
+    {
+        if (body.isMember(field) && !body[field].isNull() &&
+            (!body[field].isString() || body[field].asString().size() > 64))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool hasUpdateField(const Json::Value &body)
+{
+    return body.isMember("realName") || body.isMember("studentNo") ||
+           body.isMember("role") || body.isMember("status");
 }
 
 bool duplicateKeyError(const std::string &message)
@@ -73,7 +94,8 @@ void UserController::create(const drogon::HttpRequestPtr &request,
                             std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
     const auto json = request->getJsonObject();
-    if (!json || !hasTextField(*json, "username") || !hasTextField(*json, "password") || !validRole(*json))
+    if (!json || !hasTextField(*json, "username") || !hasTextField(*json, "password") ||
+        !validRole(*json) || !validStatus(*json) || !validProfileFields(*json))
     {
         callback(mathai::utils::jsonResponse(400, "invalid user body",
                                              Json::Value(Json::objectValue),
@@ -92,7 +114,18 @@ void UserController::create(const drogon::HttpRequestPtr &request,
     }
 
     Json::Value user = *json;
-    user["passwordHash"] = mathai::utils::makePasswordHash(password, makeSalt(username));
+    try
+    {
+        user["passwordHash"] = mathai::utils::makePasswordHash(password);
+    }
+    catch (const std::exception &exception)
+    {
+        LOG_ERROR << "Password hashing error: " << exception.what();
+        callback(mathai::utils::jsonResponse(500, "authentication service unavailable",
+                                             Json::Value(Json::objectValue),
+                                             drogon::k500InternalServerError));
+        return;
+    }
     user["status"] = user.get("status", 1);
 
     auto cb = std::make_shared<std::function<void(const drogon::HttpResponsePtr &)>>(std::move(callback));
@@ -111,7 +144,8 @@ void UserController::update(const drogon::HttpRequestPtr &request,
                             long long userId)
 {
     const auto json = request->getJsonObject();
-    if (!json || !validRole(*json))
+    if (!json || !hasUpdateField(*json) || !validRole(*json) ||
+        !validStatus(*json) || !validProfileFields(*json))
     {
         callback(mathai::utils::jsonResponse(400, "invalid user body",
                                              Json::Value(Json::objectValue),
@@ -182,10 +216,24 @@ void UserController::resetPassword(const drogon::HttpRequestPtr &request,
         return;
     }
 
+    std::string passwordHash;
+    try
+    {
+        passwordHash = mathai::utils::makePasswordHash(password);
+    }
+    catch (const std::exception &exception)
+    {
+        LOG_ERROR << "Password hashing error: " << exception.what();
+        callback(mathai::utils::jsonResponse(500, "authentication service unavailable",
+                                             Json::Value(Json::objectValue),
+                                             drogon::k500InternalServerError));
+        return;
+    }
+
     auto cb = std::make_shared<std::function<void(const drogon::HttpResponsePtr &)>>(std::move(callback));
     userDao_.updatePassword(
         userId,
-        mathai::utils::makePasswordHash(password, makeSalt(std::to_string(userId))),
+        passwordHash,
         [cb](std::uint64_t affectedRows) {
             if (affectedRows == 0)
             {

@@ -166,9 +166,11 @@ void validateJwtConfiguration()
 
 std::string createJwt(std::int64_t userId,
                       const std::string &username,
-                      const std::string &role)
+                      const std::string &role,
+                      int authVersion)
 {
-    if (userId <= 0 || username.empty() || (role != "student" && role != "admin"))
+    if (userId <= 0 || username.empty() || authVersion < 1 ||
+        (role != "student" && role != "admin"))
     {
         throw std::invalid_argument("invalid JWT claims");
     }
@@ -182,6 +184,7 @@ std::string createJwt(std::int64_t userId,
     payload["sub"] = Json::Int64(userId);
     payload["username"] = username;
     payload["role"] = role;
+    payload["ver"] = authVersion;
     payload["iat"] = Json::Int64(now);
     payload["exp"] = Json::Int64(now + jwtExpireHours() * 3600);
 
@@ -238,7 +241,8 @@ std::optional<JwtClaims> verifyJwt(const std::string &token)
     const auto payload = stringToJson(*payloadText);
     if (!payload || !payload->isObject() ||
         !(*payload)["sub"].isIntegral() || !(*payload)["role"].isString() ||
-        !(*payload)["username"].isString() || !(*payload)["exp"].isIntegral())
+        !(*payload)["username"].isString() || !(*payload)["ver"].isIntegral() ||
+        !(*payload)["exp"].isIntegral())
     {
         return std::nullopt;
     }
@@ -247,9 +251,10 @@ std::optional<JwtClaims> verifyJwt(const std::string &token)
     claims.userId = (*payload)["sub"].asInt64();
     claims.username = (*payload)["username"].asString();
     claims.role = (*payload)["role"].asString();
+    claims.authVersion = (*payload)["ver"].asInt();
     claims.exp = (*payload)["exp"].asInt64();
 
-    if (claims.userId <= 0 || claims.username.empty() ||
+    if (claims.userId <= 0 || claims.username.empty() || claims.authVersion < 1 ||
         (claims.role != "student" && claims.role != "admin") ||
         claims.exp <= static_cast<std::int64_t>(std::time(nullptr)))
     {

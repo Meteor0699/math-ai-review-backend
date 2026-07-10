@@ -16,8 +16,8 @@
 #include <openssl/rand.h>
 
 #include "clients/AiClient.h"
+#include "utils/AuthContext.h"
 #include "utils/JsonResponse.h"
-#include "utils/JwtUtil.h"
 #include "utils/MysqlSyncClient.h"
 #include "utils/RequestValidation.h"
 
@@ -28,13 +28,8 @@ std::string quote(const std::string &value) { return mathai::utils::mysql::quote
 
 std::optional<mathai::utils::JwtClaims> claimsFromRequest(const drogon::HttpRequestPtr &request)
 {
-    const auto authHeader = request->getHeader("Authorization");
-    const std::string prefix = "Bearer ";
-    if (authHeader.rfind(prefix, 0) != 0)
-    {
-        return std::nullopt;
-    }
-    return mathai::utils::verifyJwt(authHeader.substr(prefix.size()));
+    const auto auth = mathai::utils::authenticateRequest(request);
+    return auth.state == mathai::utils::AuthState::Ok ? auth.claims : std::nullopt;
 }
 
 bool isMyPapersRoute(const drogon::HttpRequestPtr &request)

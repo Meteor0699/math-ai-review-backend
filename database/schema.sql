@@ -31,6 +31,7 @@ CREATE TABLE user (
   student_no VARCHAR(64) DEFAULT NULL COMMENT '学号，管理员可为空',
   role ENUM('student', 'admin') NOT NULL DEFAULT 'student' COMMENT '用户角色：student学生，admin管理员',
   status TINYINT NOT NULL DEFAULT 1 COMMENT '用户状态：0禁用，1启用',
+  auth_version INT NOT NULL DEFAULT 1 COMMENT '鉴权版本，密码或权限变化时递增以使旧Token失效',
   last_login_at DATETIME DEFAULT NULL COMMENT '最后登录时间',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
