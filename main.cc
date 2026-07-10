@@ -14,6 +14,7 @@
 #include "controllers/QuestionController.h"
 #include "controllers/StudyController.h"
 #include "controllers/UserController.h"
+#include "filters/RateLimitFilter.h"
 #include "utils/EnvLoader.h"
 #include "utils/ErrorHandler.h"
 #include "utils/JsonResponse.h"
@@ -35,6 +36,7 @@ static void forceKeepControllers()
         &StudyController::isAutoCreation,
         &UserController::isAutoCreation,
         &HealthController::isAutoCreation,
+        &RateLimitFilter::isAutoCreation,
     };
     (void)refs;
 }

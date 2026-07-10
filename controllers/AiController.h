@@ -8,10 +8,10 @@ class AiController : public drogon::HttpController<AiController>
 {
   public:
     METHOD_LIST_BEGIN
-    ADD_METHOD_TO(AiController::explainQuestion, "/api/questions/{1}/ai-explanation", drogon::Post, "UserAuthFilter");
-    ADD_METHOD_TO(AiController::explainQuestion, "/api/v1/questions/{1}/ai-explanation", drogon::Post, "UserAuthFilter");
-    ADD_METHOD_TO(AiController::followUpQuestion, "/api/questions/{1}/ai-follow-up", drogon::Post, "UserAuthFilter");
-    ADD_METHOD_TO(AiController::followUpQuestion, "/api/v1/questions/{1}/ai-follow-up", drogon::Post, "UserAuthFilter");
+    ADD_METHOD_TO(AiController::explainQuestion, "/api/questions/{1}/ai-explanation", drogon::Post, "UserAuthFilter", "RateLimitFilter");
+    ADD_METHOD_TO(AiController::explainQuestion, "/api/v1/questions/{1}/ai-explanation", drogon::Post, "UserAuthFilter", "RateLimitFilter");
+    ADD_METHOD_TO(AiController::followUpQuestion, "/api/questions/{1}/ai-follow-up", drogon::Post, "UserAuthFilter", "RateLimitFilter");
+    ADD_METHOD_TO(AiController::followUpQuestion, "/api/v1/questions/{1}/ai-follow-up", drogon::Post, "UserAuthFilter", "RateLimitFilter");
     METHOD_LIST_END
 
     void explainQuestion(const drogon::HttpRequestPtr &request,
