@@ -2,12 +2,15 @@
 
 #include <drogon/drogon.h>
 #include <json/json.h>
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+#include <cstdlib>
 #include <ctime>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 namespace mathai::utils
@@ -15,14 +18,17 @@ namespace mathai::utils
 namespace
 {
 
-std::string jwtSecret()
+const std::string &jwtSecret()
 {
-    const auto &config = drogon::app().getCustomConfig();
-    if (config.isMember("jwt_secret") && config["jwt_secret"].isString())
-    {
-        return config["jwt_secret"].asString();
-    }
-    return "change_this_secret_in_local_development";
+    static const std::string secret = [] {
+        const auto *value = std::getenv("JWT_SECRET");
+        if (value == nullptr || std::string(value).size() < 32)
+        {
+            throw std::runtime_error("JWT_SECRET must be set to at least 32 characters");
+        }
+        return std::string(value);
+    }();
+    return secret;
 }
 
 int jwtExpireHours()
@@ -83,6 +89,21 @@ std::string base64UrlEncode(const std::string &input)
 
 std::optional<std::string> base64UrlDecode(std::string input)
 {
+    if (input.empty() || input.size() % 4 == 1)
+    {
+        return std::nullopt;
+    }
+    for (const auto ch : input)
+    {
+        const auto valid = (ch >= 'A' && ch <= 'Z') ||
+                           (ch >= 'a' && ch <= 'z') ||
+                           (ch >= '0' && ch <= '9') || ch == '-' || ch == '_';
+        if (!valid)
+        {
+            return std::nullopt;
+        }
+    }
+
     for (auto &ch : input)
     {
         if (ch == '-')
@@ -138,10 +159,20 @@ std::string hmacSha256(const std::string &data, const std::string &secret)
 
 } // namespace
 
+void validateJwtConfiguration()
+{
+    (void)jwtSecret();
+}
+
 std::string createJwt(std::int64_t userId,
                       const std::string &username,
                       const std::string &role)
 {
+    if (userId <= 0 || username.empty() || (role != "student" && role != "admin"))
+    {
+        throw std::invalid_argument("invalid JWT claims");
+    }
+
     Json::Value header;
     header["alg"] = "HS256";
     header["typ"] = "JWT";
@@ -161,16 +192,39 @@ std::string createJwt(std::int64_t userId,
 
 std::optional<JwtClaims> verifyJwt(const std::string &token)
 {
+    if (token.empty() || token.size() > 8192)
+    {
+        return std::nullopt;
+    }
+
     const auto first = token.find('.');
     const auto second = token.find('.', first == std::string::npos ? 0 : first + 1);
-    if (first == std::string::npos || second == std::string::npos)
+    if (first == std::string::npos || second == std::string::npos ||
+        first == 0 || second == first + 1 || second + 1 == token.size() ||
+        token.find('.', second + 1) != std::string::npos)
     {
         return std::nullopt;
     }
 
     const auto signingInput = token.substr(0, second);
     const auto expectedSignature = base64UrlEncode(hmacSha256(signingInput, jwtSecret()));
-    if (expectedSignature != token.substr(second + 1))
+    const auto providedSignature = token.substr(second + 1);
+    if (expectedSignature.size() != providedSignature.size() ||
+        CRYPTO_memcmp(expectedSignature.data(), providedSignature.data(), expectedSignature.size()) != 0)
+    {
+        return std::nullopt;
+    }
+
+    const auto headerText = base64UrlDecode(token.substr(0, first));
+    if (!headerText)
+    {
+        return std::nullopt;
+    }
+    const auto header = stringToJson(*headerText);
+    if (!header || !header->isObject() ||
+        !(*header)["alg"].isString() || !(*header)["typ"].isString() ||
+        (*header)["alg"].asString() != "HS256" ||
+        (*header)["typ"].asString() != "JWT")
     {
         return std::nullopt;
     }
@@ -182,8 +236,9 @@ std::optional<JwtClaims> verifyJwt(const std::string &token)
     }
 
     const auto payload = stringToJson(*payloadText);
-    if (!payload || !payload->isMember("sub") || !payload->isMember("role") ||
-        !payload->isMember("username") || !payload->isMember("exp"))
+    if (!payload || !payload->isObject() ||
+        !(*payload)["sub"].isIntegral() || !(*payload)["role"].isString() ||
+        !(*payload)["username"].isString() || !(*payload)["exp"].isIntegral())
     {
         return std::nullopt;
     }
@@ -194,7 +249,9 @@ std::optional<JwtClaims> verifyJwt(const std::string &token)
     claims.role = (*payload)["role"].asString();
     claims.exp = (*payload)["exp"].asInt64();
 
-    if (claims.exp < static_cast<std::int64_t>(std::time(nullptr)))
+    if (claims.userId <= 0 || claims.username.empty() ||
+        (claims.role != "student" && claims.role != "admin") ||
+        claims.exp <= static_cast<std::int64_t>(std::time(nullptr)))
     {
         return std::nullopt;
     }

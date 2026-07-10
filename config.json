@@ -15,7 +15,6 @@
     "log_level": "DEBUG"
   },
   "custom_config": {
-    "jwt_secret": "change_this_secret_in_local_development",
     "jwt_expire_hours": 24,
     "upload_dir": "./uploads/papers",
     "ai": {

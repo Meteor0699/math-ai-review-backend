@@ -16,6 +16,7 @@
 #include "utils/EnvLoader.h"
 #include "utils/ErrorHandler.h"
 #include "utils/JsonResponse.h"
+#include "utils/JwtUtil.h"
 
 // Force the linker to keep every controller translation unit so that their
 // static initializers (which register API routes) are not discarded in
@@ -113,6 +114,7 @@ int main()
     forceKeepControllers();
     mathai::utils::loadDotEnv(".env");
     drogon::app().loadConfigFile("config.json");
+    mathai::utils::validateJwtConfiguration();
     mathai::utils::registerErrorHandlers();
     registerFrontendRoot();
     LOG_INFO << "math-ai-review-backend started";

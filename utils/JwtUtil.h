@@ -15,6 +15,8 @@ struct JwtClaims
     std::int64_t exp{};
 };
 
+void validateJwtConfiguration();
+
 std::string createJwt(std::int64_t userId,
                       const std::string &username,
                       const std::string &role);
