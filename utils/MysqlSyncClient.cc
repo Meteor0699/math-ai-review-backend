@@ -290,6 +290,53 @@ MysqlPtr connect()
     return conn;
 }
 
+Result executeOnConnection(MYSQL *connection, const std::string &sql)
+{
+    if (mysql_real_query(connection, sql.c_str(), static_cast<unsigned long>(sql.size())) != 0)
+    {
+        throw Error(mysql_error(connection));
+    }
+
+    Result output;
+    output.affectedRows = mysql_affected_rows(connection);
+    output.insertId = mysql_insert_id(connection);
+
+    std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> res(mysql_store_result(connection),
+                                                                 mysql_free_result);
+    if (!res)
+    {
+        if (mysql_errno(connection) != 0)
+        {
+            throw Error(mysql_error(connection));
+        }
+        return output;
+    }
+
+    const auto fieldCount = mysql_num_fields(res.get());
+    MYSQL_FIELD *fields = mysql_fetch_fields(res.get());
+    MYSQL_ROW mysqlRow;
+    while ((mysqlRow = mysql_fetch_row(res.get())) != nullptr)
+    {
+        unsigned long *lengths = mysql_fetch_lengths(res.get());
+        Row row;
+        for (unsigned int i = 0; i < fieldCount; ++i)
+        {
+            const std::string fieldName = fields[i].name;
+            if (mysqlRow[i] == nullptr)
+            {
+                row.nullFields.insert(fieldName);
+                row.values[fieldName] = "";
+            }
+            else
+            {
+                row.values[fieldName] = std::string(mysqlRow[i], lengths[i]);
+            }
+        }
+        output.rows.push_back(std::move(row));
+    }
+    return output;
+}
+
 } // namespace
 
 Json::Value configSummary()
@@ -343,50 +390,36 @@ int Row::getInt(const std::string &field, int fallback) const
 Result execute(const std::string &sql)
 {
     auto conn = connect();
-    if (mysql_real_query(conn.get(), sql.c_str(), static_cast<unsigned long>(sql.size())) != 0)
+    return executeOnConnection(conn.get(), sql);
+}
+
+std::vector<Result> executeTransaction(const std::vector<std::string> &statements)
+{
+    auto conn = connect();
+    if (mysql_autocommit(conn.get(), 0) != 0)
     {
         throw Error(mysql_error(conn.get()));
     }
 
-    Result output;
-    output.affectedRows = mysql_affected_rows(conn.get());
-    output.insertId = mysql_insert_id(conn.get());
-
-    std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> res(mysql_store_result(conn.get()),
-                                                                 mysql_free_result);
-    if (!res)
+    std::vector<Result> results;
+    results.reserve(statements.size());
+    try
     {
-        if (mysql_errno(conn.get()) != 0)
+        for (const auto &statement : statements)
+        {
+            results.push_back(executeOnConnection(conn.get(), statement));
+        }
+        if (mysql_commit(conn.get()) != 0)
         {
             throw Error(mysql_error(conn.get()));
         }
-        return output;
     }
-
-    const auto fieldCount = mysql_num_fields(res.get());
-    MYSQL_FIELD *fields = mysql_fetch_fields(res.get());
-    MYSQL_ROW mysqlRow;
-    while ((mysqlRow = mysql_fetch_row(res.get())) != nullptr)
+    catch (...)
     {
-        unsigned long *lengths = mysql_fetch_lengths(res.get());
-        Row row;
-        for (unsigned int i = 0; i < fieldCount; ++i)
-        {
-            const std::string fieldName = fields[i].name;
-            if (mysqlRow[i] == nullptr)
-            {
-                row.nullFields.insert(fieldName);
-                row.values[fieldName] = "";
-            }
-            else
-            {
-                row.values[fieldName] = std::string(mysqlRow[i], lengths[i]);
-            }
-        }
-        output.rows.push_back(std::move(row));
+        mysql_rollback(conn.get());
+        throw;
     }
-
-    return output;
+    return results;
 }
 
 std::string escape(const std::string &value)

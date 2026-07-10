@@ -309,8 +309,19 @@ void QuestionDao::replaceOptions(long long questionId, const Json::Value &option
 {
     try
     {
-        mathai::utils::mysql::execute("DELETE FROM question_option WHERE question_id = " + std::to_string(questionId));
-        addOptions(questionId, options, onSuccess, onError);
+        std::vector<std::string> statements{
+            "DELETE FROM question_option WHERE question_id = " + std::to_string(questionId)};
+        if (!options.empty())
+        {
+            statements.push_back(
+                "INSERT INTO question_option (question_id, option_label, option_content, is_correct, sort_order) VALUES " +
+                optionValuesSql(questionId, options));
+        }
+
+        const auto results = mathai::utils::mysql::executeTransaction(statements);
+        Json::Value data;
+        data["created"] = Json::UInt64(results.size() > 1 ? results[1].affectedRows : 0);
+        onSuccess(data);
     }
     catch (const std::exception &exception) { onError(exception.what()); }
 }
