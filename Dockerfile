@@ -50,18 +50,22 @@ RUN apt-get update && apt-get install -y \
     uuid-dev \
     zlib1g-dev \
     libcurl4 \
+    mariadb-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=backend-builder /build/build/math-ai-review-backend /app/
 COPY --from=backend-builder /build/config.json /app/
 COPY --from=backend-builder /build/ca.pem /app/
+COPY --from=backend-builder /build/database /app/database/
+COPY --from=backend-builder /build/scripts/migrate-db.sh /app/scripts/migrate-db.sh
+COPY --from=backend-builder /build/scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
 COPY --from=frontend-builder /frontend/dist /app/frontend_dist/
 
 WORKDIR /app
 
-RUN mkdir -p uploads/papers
+RUN mkdir -p uploads/papers && chmod +x /app/scripts/migrate-db.sh /app/scripts/docker-entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["./math-ai-review-backend"]
+CMD ["/app/scripts/docker-entrypoint.sh"]

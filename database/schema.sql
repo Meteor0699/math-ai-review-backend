@@ -1,6 +1,8 @@
 ﻿-- schema.sql
 -- MySQL 8.0 schema for 高校数学课程 AI 辅助复习 Web 平台
 
+-- DEVELOPMENT INITIALIZATION ONLY: this file drops existing tables.
+-- Never run it against a production or shared database.
 CREATE DATABASE IF NOT EXISTS math_ai_review
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_unicode_ci;
