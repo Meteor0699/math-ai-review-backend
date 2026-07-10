@@ -1,0 +1,10 @@
+.git
+.env
+build
+build-msys
+frontend/node_modules
+frontend/dist
+logs
+uploads
+*.log
+*.tmp
