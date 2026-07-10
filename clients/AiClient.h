@@ -21,6 +21,7 @@ class AiClient
   public:
     using Callback = std::function<void(AiResult)>;
 
+    std::string modelName() const;
     void generateExplanation(const std::string &prompt, Callback callback) const;
 };
 

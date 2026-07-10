@@ -253,6 +253,11 @@ std::string findCaBundle()
 
 } // namespace
 
+std::string AiClient::modelName() const
+{
+    return resolveModelName();
+}
+
 void AiClient::generateExplanation(const std::string &prompt, Callback callback) const
 {
     const auto apiBaseUrl = getenvString("AI_API_BASE_URL");

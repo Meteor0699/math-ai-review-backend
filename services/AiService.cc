@@ -109,27 +109,31 @@ void AiService::explainQuestion(long long questionId, ResponseCallback callback)
         explanationFlights().complete(questionId, response);
     };
 
-    aiExplanationDao_.findExisting(
+    aiExplanationDao_.findQuestionContext(
         questionId,
-        [this, questionId, finish](Json::Value existing) {
-            if (!existing.isNull())
+        [this, questionId, finish](Json::Value questionContext) {
+            if (questionContext.isNull())
             {
-                finish(mathai::utils::jsonResponse(200, "success", existing));
+                finish(mathai::utils::jsonResponse(404, "question not found",
+                                                   Json::Value(Json::objectValue),
+                                                   drogon::k404NotFound));
                 return;
             }
 
-            aiExplanationDao_.findQuestionContext(
+            const auto prompt = buildPrompt(questionContext);
+            const auto modelName = aiClient_.modelName();
+            aiExplanationDao_.findExisting(
                 questionId,
-                [this, questionId, finish](Json::Value questionContext) {
-                    if (questionContext.isNull())
+                [this, questionId, prompt, modelName, finish](Json::Value existing) {
+                    if (!existing.isNull() &&
+                        existing["modelName"].asString() == modelName &&
+                        existing["prompt"].asString() == prompt)
                     {
-                        finish(mathai::utils::jsonResponse(404, "question not found",
-                                                           Json::Value(Json::objectValue),
-                                                           drogon::k404NotFound));
+                        existing.removeMember("prompt");
+                        finish(mathai::utils::jsonResponse(200, "success", existing));
                         return;
                     }
 
-                    const auto prompt = buildPrompt(questionContext);
                     aiClient_.generateExplanation(
                         prompt,
                         [this, questionId, prompt, finish](mathai::clients::AiResult result) {
@@ -160,13 +164,9 @@ void AiService::explainQuestion(long long questionId, ResponseCallback callback)
                                 });
                         });
                 },
-                [finish](const std::string &message) {
-                    finish(databaseErrorResponse(message));
-                });
+                [finish](const std::string &message) { finish(databaseErrorResponse(message)); });
         },
-        [finish](const std::string &message) {
-            finish(databaseErrorResponse(message));
-        });
+        [finish](const std::string &message) { finish(databaseErrorResponse(message)); });
 }
 
 void AiService::followUpQuestion(long long questionId,

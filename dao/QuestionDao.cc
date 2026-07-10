@@ -302,8 +302,10 @@ void QuestionDao::update(long long id, const Json::Value &question, CountCallbac
             << ", sort_order = " << question.get("sortOrder", 0).asInt()
             << ", status = " << question.get("status", 1).asInt()
             << " WHERE id = " << id;
-        const auto result = mathai::utils::mysql::execute(sql.str());
-        onSuccess(result.affectedRows);
+        const auto results = mathai::utils::mysql::executeTransaction({
+            sql.str(),
+            "DELETE FROM ai_explanation WHERE question_id = " + std::to_string(id)});
+        onSuccess(results[0].affectedRows);
     }
     catch (const std::exception &exception) { onError(exception.what()); }
 }
