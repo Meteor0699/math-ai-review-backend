@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { clearAuthStorage, readToken, readUser, writeAuthStorage } from '../utils/authStorage'
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref(localStorage.getItem('token') || '')
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+  const token = ref(readToken())
+  const user = ref(readUser())
 
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
@@ -14,15 +15,13 @@ export const useUserStore = defineStore('user', () => {
   function setLogin(newToken, newUser) {
     token.value = newToken
     user.value = newUser
-    localStorage.setItem('token', newToken)
-    localStorage.setItem('user', JSON.stringify(newUser))
+    writeAuthStorage(newToken, newUser)
   }
 
   function logout() {
     token.value = ''
     user.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    clearAuthStorage()
   }
 
   return {

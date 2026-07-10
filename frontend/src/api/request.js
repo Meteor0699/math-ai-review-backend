@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { clearAuthStorage, readToken } from '../utils/authStorage'
 
 const request = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -9,7 +10,7 @@ const request = axios.create({
 // 请求拦截器：自动携带 token
 request.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = readToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -37,8 +38,7 @@ request.interceptors.response.use(
         if (error.config.url === '/auth/login') {
           ElMessage.error(error.response.data?.message || '用户名或密码错误')
         } else {
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
+          clearAuthStorage()
           window.location.href = '/login'
           ElMessage.error('登录已过期，请重新登录')
         }

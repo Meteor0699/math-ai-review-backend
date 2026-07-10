@@ -110,6 +110,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getKnowledgePoints } from '../../api/course'
 import { ElMessage } from 'element-plus'
+import { renderMathContent } from '../../utils/renderMathContent'
 
 const route = useRoute()
 const chapterId = route.params.chapterId
@@ -137,12 +138,7 @@ function examFreqType(freq) {
 }
 
 function formatContent(text) {
-  if (!text) return ''
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
+  return renderMathContent(text)
 }
 </script>
 
