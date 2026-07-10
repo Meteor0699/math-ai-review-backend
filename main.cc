@@ -1,6 +1,7 @@
 #include <drogon/drogon.h>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 #include "controllers/AiController.h"
@@ -62,6 +63,61 @@ static std::string trimLeadingSlash(const std::string &path)
     return first == std::string::npos ? "" : path.substr(first);
 }
 
+static bool isStaticAssetPath(const std::string &path)
+{
+    return path.rfind("/assets/", 0) == 0 || path.rfind("/textbook-covers/", 0) == 0;
+}
+
+static std::optional<std::filesystem::path> resolveFrontendPath(
+    const std::filesystem::path &root,
+    const std::string &requestPath)
+{
+    const auto relativeText = trimLeadingSlash(requestPath);
+    if (relativeText.find('\\') != std::string::npos)
+    {
+        return std::nullopt;
+    }
+
+    const std::filesystem::path relative(relativeText);
+    if (relative.is_absolute() || relative.has_root_path())
+    {
+        return std::nullopt;
+    }
+    for (const auto &component : relative)
+    {
+        if (component == "..")
+        {
+            return std::nullopt;
+        }
+    }
+
+    std::error_code error;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(root, error);
+    if (error)
+    {
+        return std::nullopt;
+    }
+    const auto target = std::filesystem::weakly_canonical(canonicalRoot / relative, error);
+    if (error)
+    {
+        return std::nullopt;
+    }
+
+    const auto pathWithinRoot = target.lexically_relative(canonicalRoot);
+    if (pathWithinRoot.empty() || pathWithinRoot.is_absolute())
+    {
+        return std::nullopt;
+    }
+    for (const auto &component : pathWithinRoot)
+    {
+        if (component == "..")
+        {
+            return std::nullopt;
+        }
+    }
+    return target;
+}
+
 static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr &request)
 {
     const auto root = findFrontendDist();
@@ -71,9 +127,19 @@ static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr
     }
 
     const auto path = request->path();
-    auto target = root / trimLeadingSlash(path);
+    auto resolved = resolveFrontendPath(root, path);
+    if (!resolved)
+    {
+        return mathai::utils::error(404, "resource not found", drogon::k404NotFound);
+    }
+
+    auto target = *resolved;
     if (path == "/" || !std::filesystem::exists(target))
     {
+        if (isStaticAssetPath(path))
+        {
+            return mathai::utils::error(404, "resource not found", drogon::k404NotFound);
+        }
         target = root / "index.html";
     }
 
@@ -101,7 +167,7 @@ static void registerFrontendRoot()
         {drogon::Get});
 
     drogon::app().registerHandlerViaRegex(
-        "^/(login|home|courses.*|chapters.*|questions.*|study.*|papers.*|admin.*|assets/.*)$",
+        "^/(login|home|courses.*|chapters.*|questions.*|study.*|papers.*|admin.*|assets/.*|textbook-covers/.*)$",
         [](const drogon::HttpRequestPtr &request,
            std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
             callback(frontendFileResponse(request));
