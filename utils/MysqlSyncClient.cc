@@ -3,11 +3,14 @@
 #include <drogon/drogon.h>
 #include <mysql.h>
 
+#include <algorithm>
+#include <condition_variable>
 #include <cstdlib>
 #include <cctype>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace
 {
@@ -239,7 +242,7 @@ DbConfig loadConfig()
 
 using MysqlPtr = std::unique_ptr<MYSQL, decltype(&mysql_close)>;
 
-MysqlPtr connect()
+MysqlPtr createConnection()
 {
     const auto config = loadConfig();
     MYSQL *raw = mysql_init(nullptr);
@@ -286,8 +289,152 @@ MysqlPtr connect()
         throw Error(mysql_error(conn.get()));
     }
 
-    mysql_set_character_set(conn.get(), "utf8mb4");
+    if (mysql_set_character_set(conn.get(), "utf8mb4") != 0)
+    {
+        throw Error(mysql_error(conn.get()));
+    }
+
+    static const std::string normalizeSqlMode =
+        "SET SESSION sql_mode = TRIM(BOTH ',' FROM REPLACE(CONCAT(',', @@SESSION.sql_mode, ','), "
+        "',NO_BACKSLASH_ESCAPES,', ','))";
+    if (mysql_real_query(conn.get(), normalizeSqlMode.c_str(),
+                         static_cast<unsigned long>(normalizeSqlMode.size())) != 0)
+    {
+        throw Error(mysql_error(conn.get()));
+    }
     return conn;
+}
+
+class ConnectionPool;
+
+class ConnectionLease
+{
+  public:
+    ConnectionLease(MYSQL *connection, ConnectionPool *pool)
+        : connection_(connection), pool_(pool)
+    {
+    }
+    ConnectionLease(const ConnectionLease &) = delete;
+    ConnectionLease &operator=(const ConnectionLease &) = delete;
+    ConnectionLease(ConnectionLease &&other) noexcept
+        : connection_(other.connection_), pool_(other.pool_), healthy_(other.healthy_)
+    {
+        other.connection_ = nullptr;
+    }
+    ~ConnectionLease();
+
+    MYSQL *get() const { return connection_; }
+    void invalidate() { healthy_ = false; }
+
+  private:
+    MYSQL *connection_{};
+    ConnectionPool *pool_{};
+    bool healthy_{true};
+};
+
+class ConnectionPool
+{
+  public:
+    ConnectionPool()
+        : maximumSize_(std::clamp<std::size_t>(getenvUInt("DB_POOL_SIZE", 8), 1, 64))
+    {
+    }
+
+    ~ConnectionPool()
+    {
+        for (auto *connection : idle_)
+        {
+            mysql_close(connection);
+        }
+    }
+
+    ConnectionLease acquire()
+    {
+        while (true)
+        {
+            MYSQL *connection = nullptr;
+            bool createNew = false;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                available_.wait(lock, [this] { return !idle_.empty() || total_ < maximumSize_; });
+                if (!idle_.empty())
+                {
+                    connection = idle_.back();
+                    idle_.pop_back();
+                }
+                else
+                {
+                    ++total_;
+                    createNew = true;
+                }
+            }
+
+            if (createNew)
+            {
+                try
+                {
+                    connection = createConnection().release();
+                }
+                catch (...)
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    --total_;
+                    available_.notify_one();
+                    throw;
+                }
+            }
+            else if (mysql_ping(connection) != 0)
+            {
+                mysql_close(connection);
+                std::lock_guard<std::mutex> lock(mutex_);
+                --total_;
+                available_.notify_one();
+                continue;
+            }
+            return ConnectionLease(connection, this);
+        }
+    }
+
+    void release(MYSQL *connection, bool healthy)
+    {
+        if (!connection)
+        {
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (healthy)
+        {
+            idle_.push_back(connection);
+        }
+        else
+        {
+            mysql_close(connection);
+            --total_;
+        }
+        available_.notify_one();
+    }
+
+  private:
+    std::mutex mutex_;
+    std::condition_variable available_;
+    std::vector<MYSQL *> idle_;
+    std::size_t total_{0};
+    std::size_t maximumSize_;
+};
+
+ConnectionLease::~ConnectionLease()
+{
+    if (pool_)
+    {
+        pool_->release(connection_, healthy_);
+    }
+}
+
+ConnectionPool &connectionPool()
+{
+    static ConnectionPool pool;
+    return pool;
 }
 
 Result executeOnConnection(MYSQL *connection, const std::string &sql)
@@ -389,13 +536,13 @@ int Row::getInt(const std::string &field, int fallback) const
 
 Result execute(const std::string &sql)
 {
-    auto conn = connect();
+    auto conn = connectionPool().acquire();
     return executeOnConnection(conn.get(), sql);
 }
 
 std::vector<Result> executeTransaction(const std::vector<std::string> &statements)
 {
-    auto conn = connect();
+    auto conn = connectionPool().acquire();
     if (mysql_autocommit(conn.get(), 0) != 0)
     {
         throw Error(mysql_error(conn.get()));
@@ -413,10 +560,19 @@ std::vector<Result> executeTransaction(const std::vector<std::string> &statement
         {
             throw Error(mysql_error(conn.get()));
         }
+        if (mysql_autocommit(conn.get(), 1) != 0)
+        {
+            conn.invalidate();
+            throw Error(mysql_error(conn.get()));
+        }
     }
     catch (...)
     {
         mysql_rollback(conn.get());
+        if (mysql_autocommit(conn.get(), 1) != 0)
+        {
+            conn.invalidate();
+        }
         throw;
     }
     return results;
@@ -428,11 +584,19 @@ std::string escape(const std::string &value)
     escaped.reserve(value.size() * 2);
     for (const auto ch : value)
     {
-        if (ch == '\'' || ch == '\\')
+        switch (ch)
         {
-            escaped.push_back('\\');
+        case '\0': escaped += "\\0"; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\\': escaped += "\\\\"; break;
+        case '\'': escaped += "\\'"; break;
+        case '"': escaped += "\\\""; break;
+        case '\x1a': escaped += "\\Z"; break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
-        escaped.push_back(ch);
     }
     return escaped;
 }

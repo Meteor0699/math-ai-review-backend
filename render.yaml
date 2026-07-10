@@ -25,6 +25,8 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      - key: DB_POOL_SIZE
+        value: 8
 
   # 前端服务（静态站点）
   - type: web

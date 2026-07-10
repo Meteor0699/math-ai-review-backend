@@ -7,7 +7,7 @@
     }
   ],
   "app": {
-    "number_of_threads": 1,
+    "number_of_threads": 4,
     "enable_session": false,
     "log_path": "./logs",
     "logfile_base_name": "math-ai-review-backend",
