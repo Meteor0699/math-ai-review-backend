@@ -5,7 +5,7 @@
 USE math_ai_review;
 
 -- ========== 1. 用户数据 ==========
--- 密码：123456（使用 SHA256 哈希，格式：sha256$salt$hash）
+-- 以下哈希仅用于本地开发数据，不应作为生产账号凭据。
 INSERT INTO user (username, password_hash, real_name, role, status) VALUES
 ('admin',  'sha256$dev123$f7f59778cf2f81a087d959beb59dacc0402831f34e1aaf50110a21977e672eae', '管理员', 'admin', 1),
 ('student', 'sha256$dev123$f7f59778cf2f81a087d959beb59dacc0402831f34e1aaf50110a21977e672eae', '学生张三', 'student', 1),

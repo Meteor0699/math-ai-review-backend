@@ -1,30 +1,22 @@
 <template>
   <div class="login-page">
     <section class="intro-panel">
-      <div class="brand-row">
-        <span class="brand-mark">
-          <el-icon><School /></el-icon>
-        </span>
-        <span>数研 AI</span>
-      </div>
-      <h1>把大学数学复习拆成每天能完成的小任务</h1>
+      <AppLogo class="login-logo" />
+      <h1>把期末复习，变成清晰可执行的学习路径</h1>
       <p class="intro-copy">
-        课程教材、章节知识点、题库和 AI 讲解放在同一个学习空间里，适合期中、期末和考前集中复盘。
+        从课程章节到题库练习，再到 AI 分步讲解。把高等数学、线性代数和概率统计放进同一个复习工作台。
       </p>
-      <div class="intro-stats">
-        <div>
-          <strong>3</strong>
-          <span>门核心课程</span>
-        </div>
-        <div>
-          <strong>AI</strong>
-          <span>题目讲解与追问</span>
-        </div>
-        <div>
-          <strong>历年</strong>
-          <span>试题资料管理</span>
+      <div class="course-preview">
+        <div v-for="course in coursePreview" :key="course.name" class="preview-item">
+          <img :src="course.cover" :alt="`${course.name}教材封面`" />
+          <span>{{ course.name }}</span>
         </div>
       </div>
+      <ul class="intro-features">
+        <li><el-icon><CircleCheck /></el-icon>章节知识点与重点公式集中复习</li>
+        <li><el-icon><CircleCheck /></el-icon>题目答案按需查看，保留独立思考</li>
+        <li><el-icon><CircleCheck /></el-icon>AI 讲解支持围绕当前题目继续追问</li>
+      </ul>
     </section>
 
     <section class="login-card">
@@ -96,9 +88,7 @@
         </el-tab-pane>
       </el-tabs>
 
-      <div class="login-footer">
-        测试账号：admin / 123456，student / 123456
-      </div>
+      <div class="login-footer">账号信息仅用于登录验证，请勿与他人共享密码。</div>
     </section>
   </div>
 </template>
@@ -106,9 +96,10 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Lock, School, Tickets, User, UserFilled } from '@element-plus/icons-vue'
+import { Lock, Tickets, User, UserFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { login as loginApi, register as registerApi } from '../api/auth'
+import AppLogo from '../components/AppLogo.vue'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
@@ -130,6 +121,12 @@ const registerForm = reactive({
   password: '',
   confirmPassword: ''
 })
+
+const coursePreview = [
+  { name: '高等数学', cover: '/textbook-covers/tongji-advanced-math-1.svg' },
+  { name: '线性代数', cover: '/textbook-covers/engineering-math-linear-algebra.svg' },
+  { name: '概率统计', cover: '/textbook-covers/znufe-probability-statistics.svg' }
+]
 
 const loginRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -213,86 +210,95 @@ async function handleRegister() {
 .login-page {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 460px);
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 450px);
   align-items: center;
-  gap: 48px;
+  gap: clamp(40px, 7vw, 100px);
   padding: 48px max(36px, 8vw);
-  background:
-    linear-gradient(180deg, rgba(234, 242, 255, 0.78), rgba(246, 248, 251, 0.25)),
-    #f6f8fb;
+  background: var(--color-background);
 }
 
 .intro-panel {
-  max-width: 620px;
+  max-width: 680px;
 }
 
-.brand-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: #2563eb;
-  font-weight: 700;
-  margin-bottom: 28px;
-}
-
-.brand-mark {
-  width: 38px;
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: #eaf2ff;
+.login-logo {
+  margin-bottom: 36px;
 }
 
 .intro-panel h1 {
-  font-size: 42px;
-  line-height: 1.2;
-  color: #1f2937;
-  max-width: 560px;
+  max-width: 620px;
   margin-bottom: 18px;
+  color: var(--color-text-primary);
+  font-size: 38px;
+  line-height: 1.28;
+  letter-spacing: 0;
 }
 
 .intro-copy {
   font-size: 16px;
   line-height: 1.8;
-  color: #5b6472;
-  max-width: 560px;
+  color: var(--color-text-secondary);
+  max-width: 620px;
 }
 
-.intro-stats {
+.course-preview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.preview-item {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  margin-top: 34px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
-.intro-stats div {
-  padding: 18px;
-  border: 1px solid #dbe6f8;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+.preview-item img {
+  width: 52px;
+  height: 68px;
+  flex: 0 0 52px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
 }
 
-.intro-stats strong {
-  display: block;
-  font-size: 24px;
-  color: #2563eb;
-  margin-bottom: 6px;
+.preview-item span {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.intro-stats span {
-  color: #6b7280;
-  font-size: 13px;
+.intro-features {
+  display: grid;
+  gap: 9px;
+  margin-top: 26px;
+  color: var(--color-text-secondary);
+  list-style: none;
+}
+
+.intro-features li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.intro-features .el-icon {
+  color: var(--color-success);
 }
 
 .login-card {
   width: 100%;
   padding: 32px;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 18px 48px rgba(31, 41, 55, 0.10);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
 .login-header {
@@ -301,12 +307,12 @@ async function handleRegister() {
 
 .login-header h2 {
   font-size: 24px;
-  color: #1f2937;
+  color: var(--color-text-primary);
   margin-bottom: 6px;
 }
 
 .login-header p {
-  color: #6b7280;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -318,7 +324,7 @@ async function handleRegister() {
   margin-top: 12px;
   text-align: center;
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 900px) {
@@ -332,8 +338,9 @@ async function handleRegister() {
     font-size: 30px;
   }
 
-  .intro-stats {
-    grid-template-columns: 1fr;
+  .course-preview,
+  .intro-features {
+    display: none;
   }
 
   .login-card {

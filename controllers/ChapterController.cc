@@ -48,10 +48,7 @@ void ChapterController::detail(const drogon::HttpRequestPtr &,
                                std::function<void(const drogon::HttpResponsePtr &)> &&callback,
                                long long chapterId)
 {
-    Json::Value data;
-    data["id"] = Json::Int64(chapterId);
-    data["title"] = "chapter placeholder";
-    callback(mathai::utils::jsonResponse(200, "success", data));
+    chapterService_.detail(chapterId, std::move(callback));
 }
 
 void ChapterController::create(const drogon::HttpRequestPtr &request,

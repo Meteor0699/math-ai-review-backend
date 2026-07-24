@@ -1,205 +1,195 @@
 <template>
-  <div class="course-list-page">
-    <div class="page-header">
-      <h2>
-        <el-icon><Collection /></el-icon>
-        课程列表
-      </h2>
-      <p class="page-desc">选择课程，按教材体系开始复习</p>
-      <el-divider />
-    </div>
+  <div class="app-page">
+    <PageHeader title="课程学习" description="按课程进入章节目录，沿着教材体系完成复习。">
+      <template #actions>
+        <el-button :icon="EditPen" @click="$router.push('/questions')">进入题库</el-button>
+      </template>
+    </PageHeader>
 
     <div v-loading="loading" class="course-grid">
-      <el-card
-        v-for="course in courseList"
-        :key="course.id"
-        class="course-card"
-        shadow="hover"
-        :body-style="{ padding: 0 }"
-        @click="$router.push(`/courses/${course.id}`)"
-      >
-        <div class="cover-wrap">
+      <article v-for="course in courses" :key="course.id" class="course-card">
+        <div class="cover-area">
           <img
             v-if="getPrimaryCourseCover(course)"
-            class="course-cover"
             :src="getPrimaryCourseCover(course)"
-            :alt="`${course.courseName || course.name} 课程封面`"
+            :alt="`${course.courseName || course.name}教材封面`"
+            @error="hideBrokenImage"
           />
-          <div v-else class="course-icon" :style="{ background: courseColors[course.id % 3] }">
-            <el-icon :size="28"><Notebook /></el-icon>
-          </div>
+          <span class="cover-fallback"><el-icon><Collection /></el-icon></span>
         </div>
-        <div class="card-body">
-          <div class="card-top">
-            <el-tag :type="tagTypes[course.id % 3]" size="small" effect="plain">
-              {{ course.courseCode || course.code }}
-            </el-tag>
-            <span class="book-count">{{ getCourseTextbooks(course).length }} 本参考教材</span>
+        <div class="course-body">
+          <div class="course-heading">
+            <div>
+              <span>{{ course.courseCode || course.code || '大学数学' }}</span>
+              <h2>{{ course.courseName || course.name }}</h2>
+            </div>
+            <el-tag effect="plain">{{ chapterCounts[course.id] || 0 }} 章</el-tag>
           </div>
-          <div class="course-name">{{ course.courseName || course.name }}</div>
-          <div class="course-desc">{{ course.courseDesc || course.description }}</div>
-          <el-divider style="margin: 16px 0" />
-          <div class="card-footer">
-            <span class="enter-link">
-              进入课程 <el-icon><ArrowRight /></el-icon>
-            </span>
+          <p>{{ course.courseDesc || course.description || '按章节复习本课程的核心概念、公式和典型题。' }}</p>
+          <div class="course-meta">
+            <span><el-icon><Reading /></el-icon>{{ getCourseTextbooks(course).length }} 本参考教材</span>
+            <span><el-icon><Notebook /></el-icon>{{ recordCount(course.id) }} 条学习记录</span>
           </div>
+          <el-button type="primary" @click="$router.push(`/courses/${course.id}`)">进入学习</el-button>
         </div>
-      </el-card>
+      </article>
     </div>
 
-    <el-empty v-if="!loading && courseList.length === 0" description="暂无课程数据" />
+    <el-empty v-if="!loading && !courses.length" description="暂无已开放课程" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getCourseList } from '../../api/course'
+import { onMounted, reactive, ref } from 'vue'
+import { EditPen } from '@element-plus/icons-vue'
+import PageHeader from '../../components/PageHeader.vue'
+import { getChapters, getCourseList, getQuestionRecords } from '../../api/course'
 import { getCourseTextbooks, getPrimaryCourseCover } from '../../data/courseTextbooks'
-import { ElMessage } from 'element-plus'
 
-const courseColors = [
-  'linear-gradient(135deg, #2f80ed 0%, #56ccf2 100%)',
-  'linear-gradient(135deg, #27ae60 0%, #6fcf97 100%)',
-  'linear-gradient(135deg, #9b51e0 0%, #bb6bd9 100%)'
-]
-
-const tagTypes = ['', 'success', 'warning']
-
-const courseList = ref([])
+const courses = ref([])
+const records = ref([])
+const chapterCounts = reactive({})
 const loading = ref(false)
 
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await getCourseList({ page: 1, pageSize: 100 })
-    if (res.code === 200) {
-      courseList.value = res.data?.items || []
-    }
-  } catch {
-    ElMessage.error('加载课程列表失败')
+    const [courseResponse, recordResponse] = await Promise.all([
+      getCourseList({ page: 1, pageSize: 100 }),
+      getQuestionRecords({ page: 1, pageSize: 100 }).catch(() => ({ data: { items: [] } }))
+    ])
+    courses.value = courseResponse.data?.items || []
+    records.value = recordResponse.data?.items || []
+    await Promise.all(courses.value.map(async (course) => {
+      const response = await getChapters(course.id, { page: 1, pageSize: 100 }).catch(() => null)
+      chapterCounts[course.id] = response?.data?.items?.length || 0
+    }))
   } finally {
     loading.value = false
   }
 })
+
+function recordCount(courseId) {
+  return records.value.filter((item) => Number(item.courseId) === Number(courseId)).length
+}
+
+function hideBrokenImage(event) {
+  event.currentTarget.style.display = 'none'
+}
 </script>
 
 <style scoped>
-.course-list-page {
-  max-width: 1120px;
-  margin: 0 auto;
-}
-
-.page-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 22px;
-  color: #303133;
-}
-
-.page-desc {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 6px;
-}
-
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 18px;
 }
 
 .course-card {
-  cursor: pointer;
-  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  min-height: 224px;
   overflow: hidden;
-  transition: transform 0.25s, box-shadow 0.25s;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  transition: transform var(--motion-base) var(--ease-out), border-color var(--motion-fast);
 }
 
 .course-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
+  border-color: var(--color-primary);
 }
 
-.cover-wrap {
-  height: 210px;
-  background: #f5f7fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #ebeef5;
+.cover-area {
+  position: relative;
+  min-height: 224px;
+  background: var(--color-primary-light);
 }
 
-.course-cover {
+.cover-area img,
+.cover-fallback {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.cover-area img {
+  z-index: 1;
   object-fit: cover;
 }
 
-.course-icon {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-  color: #fff;
-}
-
-.card-body {
-  padding: 20px 22px 22px;
-}
-
-.card-top {
+.cover-fallback {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  font-size: 32px;
+}
+
+.course-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.course-heading {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
-.book-count {
-  color: #909399;
-  font-size: 12px;
-  white-space: nowrap;
+.course-heading span {
+  color: var(--color-primary);
+  font-size: var(--text-xs);
 }
 
-.course-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #303133;
-  margin-bottom: 8px;
+.course-heading h2 {
+  margin-top: 3px;
+  font-size: var(--text-lg);
 }
 
-.course-desc {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.6;
-  min-height: 64px;
+.course-body > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 12px 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-.card-footer {
-  text-align: right;
+.course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: auto 0 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
-.enter-link {
+.course-meta span {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  color: #409EFF;
-  font-weight: 500;
 }
 
-@media (max-width: 960px) {
-  .course-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
+@media (max-width: 520px) {
   .course-grid {
     grid-template-columns: 1fr;
+  }
+
+  .course-card {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+
+  .cover-area {
+    min-height: 230px;
   }
 }
 </style>

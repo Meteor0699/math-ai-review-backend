@@ -4,14 +4,14 @@
 
 int main(int argc, char **argv)
 {
-    const std::string password = "123456";
+    const std::string password = "unit-test-password";
     const auto hash = mathai::utils::makePasswordHash(password);
     if (hash.rfind("pbkdf2_sha256$", 0) != 0 ||
         !mathai::utils::verifyPassword(password, hash) ||
         mathai::utils::verifyPassword("wrong-password", hash) ||
         !mathai::utils::verifyPassword(
             password,
-            "sha256$math-ai-review$b9ef3da9ebe71810e3c5d67b311bf23ce15f70646de275e131db945ed7ff0555"))
+            "sha256$math-ai-review$f321a197ca7da6e57b8bc1a5f843c60dc4c40bd4e0627153e63b16bc8c115ab4"))
     {
         std::cerr << "password hash verification failed\n";
         return 1;
