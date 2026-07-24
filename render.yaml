@@ -7,12 +7,18 @@ services:
     dockerContext: .
     plan: free
     envVars:
+      - key: JWT_SECRET
+        generateValue: true
       - key: AI_API_BASE_URL
         sync: false
       - key: AI_API_KEY
         sync: false
       - key: AI_MODEL
         sync: false
+      - key: AI_MAX_CONCURRENCY
+        value: 4
+      - key: AI_QUEUE_SIZE
+        value: 32
       - key: DB_HOST
         sync: false
       - key: DB_PORT
@@ -23,6 +29,12 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
+      - key: DB_SSL_MODE
+        value: REQUIRED
+      - key: DB_POOL_SIZE
+        value: 8
+      - key: DB_POOL_ACQUIRE_TIMEOUT_MS
+        value: 3000
 
   # 前端服务（静态站点）
   - type: web

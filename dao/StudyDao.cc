@@ -16,6 +16,28 @@ std::string nullableNote(const std::string &value)
     return value.empty() ? "NULL" : quote(value);
 }
 
+std::string attemptUpsertSql(long long userId,
+                             long long questionId,
+                             const std::string &status,
+                             const std::string &note)
+{
+    return "INSERT INTO question_attempt (user_id, question_id, status, note, attempt_count) "
+           "SELECT " + std::to_string(userId) + ", q.id, " + quote(status) + ", " + nullableNote(note) + ", 1 "
+           "FROM question q WHERE q.id = " + std::to_string(questionId) + " AND q.status = 1 "
+           "ON DUPLICATE KEY UPDATE status = VALUES(status), "
+           "note = COALESCE(VALUES(note), note), attempt_count = attempt_count + 1, "
+           "last_attempt_at = CURRENT_TIMESTAMP";
+}
+
+std::string wrongQuestionUpsertSql(long long userId, long long questionId, const std::string &note)
+{
+    return "INSERT INTO wrong_question (user_id, question_id, note, status, added_at, removed_at) "
+           "SELECT " + std::to_string(userId) + ", q.id, " + nullableNote(note) + ", 1, CURRENT_TIMESTAMP, NULL "
+           "FROM question q WHERE q.id = " + std::to_string(questionId) + " AND q.status = 1 "
+           "ON DUPLICATE KEY UPDATE note = VALUES(note), status = 1, "
+           "added_at = CURRENT_TIMESTAMP, removed_at = NULL";
+}
+
 std::string questionTypeLabel(const std::string &type)
 {
     if (type == "single_choice") return u8"\u5355\u9009\u9898";
@@ -127,13 +149,7 @@ void StudyDao::upsertAttempt(long long userId,
 {
     try
     {
-        mathai::utils::mysql::execute(
-            "INSERT INTO question_attempt (user_id, question_id, status, note, attempt_count) VALUES (" +
-            std::to_string(userId) + ", " + std::to_string(questionId) + ", " + quote(status) + ", " + nullableNote(note) + ", 1) "
-            "ON DUPLICATE KEY UPDATE status = VALUES(status), "
-            "note = COALESCE(VALUES(note), note), "
-            "attempt_count = attempt_count + 1, "
-            "last_attempt_at = CURRENT_TIMESTAMP");
+        mathai::utils::mysql::execute(attemptUpsertSql(userId, questionId, status, note));
         findState(userId, questionId, std::move(onSuccess), std::move(onError));
     }
     catch (const std::exception &exception)
@@ -148,7 +164,9 @@ void StudyDao::listAttempts(long long userId, int page, int pageSize, JsonCallba
     {
         const auto offset = static_cast<int>((page - 1) * pageSize);
         const auto countResult = mathai::utils::mysql::execute(
-            "SELECT COUNT(*) AS total FROM question_attempt WHERE user_id = " + std::to_string(userId));
+            "SELECT COUNT(*) AS total FROM question_attempt qa "
+            "JOIN question q ON qa.question_id = q.id "
+            "WHERE qa.user_id = " + std::to_string(userId) + " AND q.status = 1");
         const auto total = static_cast<Json::UInt64>(countResult.rows[0].getInt64("total"));
         const auto result = mathai::utils::mysql::execute(
             "SELECT qa.id AS record_id, qa.status AS record_status, qa.note AS record_note, qa.attempt_count, "
@@ -185,11 +203,10 @@ void StudyDao::addWrong(long long userId,
 {
     try
     {
-        mathai::utils::mysql::execute(
-            "INSERT INTO wrong_question (user_id, question_id, note, status, added_at, removed_at) VALUES (" +
-            std::to_string(userId) + ", " + std::to_string(questionId) + ", " + nullableNote(note) + ", 1, CURRENT_TIMESTAMP, NULL) "
-            "ON DUPLICATE KEY UPDATE note = VALUES(note), status = 1, added_at = CURRENT_TIMESTAMP, removed_at = NULL");
-        upsertAttempt(userId, questionId, "wrong", note, std::move(onSuccess), std::move(onError));
+        mathai::utils::mysql::executeTransaction({
+            wrongQuestionUpsertSql(userId, questionId, note),
+            attemptUpsertSql(userId, questionId, "wrong", note)});
+        findState(userId, questionId, std::move(onSuccess), std::move(onError));
     }
     catch (const std::exception &exception)
     {
@@ -201,10 +218,12 @@ void StudyDao::removeWrong(long long userId, long long questionId, CountCallback
 {
     try
     {
-        const auto result = mathai::utils::mysql::execute(
+        const auto results = mathai::utils::mysql::executeTransaction({
             "UPDATE wrong_question SET status = 0, removed_at = CURRENT_TIMESTAMP "
-            "WHERE user_id = " + std::to_string(userId) + " AND question_id = " + std::to_string(questionId) + " AND status = 1");
-        onSuccess(result.affectedRows);
+            "WHERE user_id = " + std::to_string(userId) + " AND question_id = " + std::to_string(questionId) + " AND status = 1",
+            "UPDATE question_attempt SET status = 'viewed', last_attempt_at = CURRENT_TIMESTAMP "
+            "WHERE user_id = " + std::to_string(userId) + " AND question_id = " + std::to_string(questionId) + " AND status = 'wrong'"});
+        onSuccess(results[0].affectedRows);
     }
     catch (const std::exception &exception)
     {

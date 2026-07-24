@@ -15,6 +15,7 @@ Json::Value explanationRowToJson(const mathai::utils::mysql::Row &row)
     data["id"] = Json::Int64(row.getInt64("id"));
     data["questionId"] = Json::Int64(row.getInt64("question_id"));
     data["modelName"] = row.getString("model_name");
+    data["prompt"] = row.getString("prompt");
     data["explanation"] = row.getString("explanation");
     data["cached"] = true;
     return data;
@@ -40,7 +41,7 @@ void AiExplanationDao::findExisting(long long questionId, JsonCallback onSuccess
     try
     {
         const auto result = mathai::utils::mysql::execute(
-            "SELECT id, question_id, model_name, explanation FROM ai_explanation WHERE question_id = " +
+            "SELECT id, question_id, model_name, prompt, explanation FROM ai_explanation WHERE question_id = " +
             std::to_string(questionId) + " AND status = 'success' LIMIT 1");
         if (result.rows.empty())
         {

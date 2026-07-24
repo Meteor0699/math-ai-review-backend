@@ -1,129 +1,103 @@
 <template>
-  <div class="knowledge-detail">
-    <!-- 面包屑 -->
-    <el-breadcrumb separator="/" style="margin-bottom: 16px">
-      <el-breadcrumb-item :to="{ path: '/courses' }">课程列表</el-breadcrumb-item>
-      <el-breadcrumb-item :to="`/chapters/${chapterId}`">章节详情</el-breadcrumb-item>
-      <el-breadcrumb-item>重点知识</el-breadcrumb-item>
-    </el-breadcrumb>
+  <div class="app-page knowledge-page">
+    <PageHeader title="重点知识" description="按知识点复习核心概念、公式、典型题和常见错误。">
+      <template #breadcrumb>
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item :to="{ path: '/courses' }">课程学习</el-breadcrumb-item>
+          <el-breadcrumb-item :to="`/chapters/${chapterId}`">章节详情</el-breadcrumb-item>
+          <el-breadcrumb-item>重点知识</el-breadcrumb-item>
+        </el-breadcrumb>
+      </template>
+      <template #actions>
+        <el-button @click="$router.push(`/chapters/${chapterId}`)">返回章节</el-button>
+        <el-button type="primary" @click="$router.push(`/questions?chapterId=${chapterId}`)">章节题库</el-button>
+      </template>
+    </PageHeader>
 
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h2>
-        <el-icon><Reading /></el-icon>
-        重点知识
-      </h2>
-      <div class="header-actions">
-        <el-button @click="$router.push(`/chapters/${chapterId}`)">
-          <el-icon><ArrowLeft /></el-icon>
-          返回章节
-        </el-button>
-        <el-button type="primary" @click="$router.push(`/questions?chapterId=${chapterId}`)">
-          <el-icon><Edit /></el-icon>
-          去题库练习
-        </el-button>
-      </div>
-    </div>
+    <div v-loading="loading" class="knowledge-layout">
+      <aside v-if="knowledgePoints.length" class="knowledge-nav">
+        <span>本章知识点</span>
+        <button
+          v-for="(point, index) in knowledgePoints"
+          :key="point.id"
+          type="button"
+          :class="{ active: activeId === point.id }"
+          @click="scrollToPoint(point.id)"
+        >
+          <strong>{{ index + 1 }}</strong>
+          <span>{{ point.title }}</span>
+        </button>
+      </aside>
 
-    <!-- 知识点列表 -->
-    <div v-loading="loading">
-      <div v-if="!loading && knowledgePoints.length === 0">
-        <el-empty description="暂无知识点数据" />
-      </div>
-
-      <el-card
-        v-for="(kp, index) in knowledgePoints"
-        :key="kp.id"
-        class="kp-card"
-        shadow="never"
-        :body-style="{ padding: '0' }"
-      >
-        <!-- 知识点标题栏 -->
-        <div class="kp-title-bar">
-          <div class="kp-title-left">
-            <span class="kp-index">{{ index + 1 }}</span>
-            <span class="kp-title-text">{{ kp.title }}</span>
-          </div>
-          <el-tag
-            :type="examFreqType(kp.examFrequency)"
-            size="small"
-            effect="dark"
-          >
-            {{ kp.examFrequency || '一般' }}
-          </el-tag>
-        </div>
-
-        <!-- 知识点主体 -->
-        <div class="kp-body">
-          <!-- 核心内容 -->
-          <div class="kp-section" v-if="kp.coreContent">
-            <div class="section-label">
-              <el-icon><CircleCheck /></el-icon>
-              核心内容
+      <main class="knowledge-content">
+        <article
+          v-for="(point, index) in knowledgePoints"
+          :id="`knowledge-${point.id}`"
+          :key="point.id"
+          class="knowledge-article"
+        >
+          <header>
+            <div>
+              <span>知识点 {{ index + 1 }}</span>
+              <h2>{{ point.title }}</h2>
             </div>
-            <div class="section-content" v-html="formatContent(kp.coreContent)"></div>
-          </div>
+            <el-tag :type="examFrequencyType(point.examFrequency)" effect="plain">
+              {{ examFrequencyLabel(point.examFrequency) }}
+            </el-tag>
+          </header>
 
-          <!-- 常用公式 -->
-          <div class="kp-section formula-section" v-if="kp.formulas">
-            <div class="section-label">
-              <el-icon><Operation /></el-icon>
-              常用公式
-            </div>
-            <div class="section-content" v-html="formatContent(kp.formulas)"></div>
+          <section v-if="point.coreContent">
+            <h3><el-icon><CircleCheck /></el-icon>核心概念</h3>
+            <FormulaContent :content="point.coreContent" />
+          </section>
+          <section v-if="point.formulas" class="formula-block">
+            <h3><el-icon><Operation /></el-icon>常用公式</h3>
+            <FormulaContent :content="point.formulas" />
+          </section>
+          <section v-if="point.typicalQuestions">
+            <h3><el-icon><TrophyBase /></el-icon>典型题型</h3>
+            <FormulaContent :content="point.typicalQuestions" />
+          </section>
+          <div class="knowledge-notes">
+            <section v-if="point.commonMistakes" class="mistake-block">
+              <h3><el-icon><WarningFilled /></el-icon>易错点</h3>
+              <FormulaContent :content="point.commonMistakes" />
+            </section>
+            <section v-if="point.reviewAdvice" class="advice-block">
+              <h3><el-icon><Bell /></el-icon>复习建议</h3>
+              <FormulaContent :content="point.reviewAdvice" />
+            </section>
           </div>
-
-          <!-- 高频题型 -->
-          <div class="kp-section" v-if="kp.typicalQuestions">
-            <div class="section-label">
-              <el-icon><TrophyBase /></el-icon>
-              高频题型
-            </div>
-            <div class="section-content" v-html="formatContent(kp.typicalQuestions)"></div>
-          </div>
-
-          <!-- 易错点 -->
-          <div class="kp-section mistake-section" v-if="kp.commonMistakes">
-            <div class="section-label">
-              <el-icon><WarningFilled /></el-icon>
-              易错点
-            </div>
-            <div class="section-content" v-html="formatContent(kp.commonMistakes)"></div>
-          </div>
-
-          <!-- 复习建议 -->
-          <div class="kp-section advice-section" v-if="kp.reviewAdvice">
-            <div class="section-label">
-              <el-icon><Bell /></el-icon>
-              复习建议
-            </div>
-            <div class="section-content" v-html="formatContent(kp.reviewAdvice)"></div>
-          </div>
-        </div>
-      </el-card>
+          <footer>
+            <el-button type="primary" plain @click="$router.push(`/questions?chapterId=${chapterId}`)">练习关联题目</el-button>
+          </footer>
+        </article>
+        <el-empty v-if="!loading && !knowledgePoints.length" description="本章暂未录入重点知识" />
+      </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { getKnowledgePoints } from '../../api/course'
 import { ElMessage } from 'element-plus'
+import FormulaContent from '../../components/FormulaContent.vue'
+import PageHeader from '../../components/PageHeader.vue'
+import { getKnowledgePoints } from '../../api/course'
 
 const route = useRoute()
 const chapterId = route.params.chapterId
-
 const knowledgePoints = ref([])
 const loading = ref(false)
+const activeId = ref(null)
 
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await getKnowledgePoints(chapterId, { page: 1, pageSize: 100 })
-    if (res.code === 200) {
-      knowledgePoints.value = res.data?.items || []
-    }
+    const response = await getKnowledgePoints(chapterId, { page: 1, pageSize: 100 })
+    knowledgePoints.value = response.data?.items || []
+    activeId.value = knowledgePoints.value[0]?.id || null
   } catch {
     ElMessage.error('加载知识点失败')
   } finally {
@@ -131,174 +105,202 @@ onMounted(async () => {
   }
 })
 
-function examFreqType(freq) {
-  const map = { high: 'danger', '高频': 'danger', medium: 'warning', '中频': 'warning', low: 'info', '低频': 'info' }
-  return map[freq] || 'info'
+function scrollToPoint(id) {
+  activeId.value = id
+  document.getElementById(`knowledge-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function formatContent(text) {
-  if (!text) return ''
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
+function examFrequencyLabel(value) {
+  return { high: '高频考点', medium: '中频考点', low: '基础考点' }[value] || value || '一般'
+}
+
+function examFrequencyType(value) {
+  return { high: 'danger', medium: 'warning', low: 'info', 高频: 'danger', 中频: 'warning', 低频: 'info' }[value] || 'info'
 }
 </script>
 
 <style scoped>
-.knowledge-detail {
-  max-width: 900px;
-  margin: 0 auto;
+.knowledge-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+  min-height: 360px;
 }
 
-/* 页面标题 */
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
-.page-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 22px;
-  color: #303133;
-}
-
-.header-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* 知识点卡片 */
-.kp-card {
-  margin-bottom: 20px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid #e4e7ed;
-}
-
-/* 标题栏 */
-.kp-title-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.kp-title-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.kp-index {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  font-size: 14px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.kp-title-text {
-  font-size: 17px;
-  font-weight: 600;
-}
-
-/* 主体 */
-.kp-body {
-  padding: 24px;
-}
-
-/* 每个区块 */
-.kp-section {
-  margin-bottom: 20px;
-}
-
-.kp-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
+.knowledge-nav {
+  position: sticky;
+  top: calc(var(--header-height) + 20px);
+  display: grid;
   gap: 6px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.knowledge-nav > span {
+  padding: 4px 8px 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.knowledge-nav button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.knowledge-nav button:hover,
+.knowledge-nav button.active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.knowledge-nav strong {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  background: #fff;
+}
+
+.knowledge-nav button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-content {
+  display: grid;
+  gap: 18px;
+}
+
+.knowledge-article {
+  scroll-margin-top: calc(var(--header-height) + 20px);
+  padding: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+}
+
+.knowledge-article > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.knowledge-article > header span {
+  color: var(--color-primary);
+  font-size: var(--text-xs);
+}
+
+.knowledge-article > header h2 {
+  margin-top: 3px;
+  font-size: var(--text-lg);
+}
+
+.knowledge-article > section {
+  padding: 20px 0 4px;
+}
+
+.knowledge-article h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409EFF;
+  font-size: var(--text-base);
 }
 
-.section-label .el-icon {
-  color: #409EFF;
+.knowledge-article h3 .el-icon {
+  color: var(--color-primary);
 }
 
-/* 公式区块 */
-.formula-section .section-label {
-  border-bottom-color: #67c23a;
+.formula-block {
+  margin-top: 16px;
+  padding: 18px !important;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-light);
 }
 
-.formula-section .section-label .el-icon {
-  color: #67c23a;
+.knowledge-notes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
 }
 
-/* 易错点区块 */
-.mistake-section .section-label {
-  border-bottom-color: #f56c6c;
+.knowledge-notes section {
+  padding: 16px;
+  border-radius: var(--radius-lg);
 }
 
-.mistake-section .section-label .el-icon {
-  color: #f56c6c;
+.mistake-block {
+  background: var(--color-danger-light);
 }
 
-/* 复习建议区块 */
-.advice-section .section-label {
-  border-bottom-color: #e6a23c;
+.mistake-block h3 .el-icon {
+  color: var(--color-danger);
 }
 
-.advice-section .section-label .el-icon {
-  color: #e6a23c;
+.advice-block {
+  background: var(--color-warning-light);
 }
 
-.section-content {
-  font-size: 14px;
-  color: #4a4a4a;
-  line-height: 1.8;
-  padding: 4px 0;
+.advice-block h3 .el-icon {
+  color: var(--color-warning);
 }
 
-/* 公式区块特殊样式 */
-.formula-section .section-content {
-  font-family: 'Courier New', Courier, monospace;
-  background: #f0f9eb;
-  padding: 12px 16px;
-  border-radius: 6px;
-  border-left: 3px solid #67c23a;
+.knowledge-article footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
 }
 
-.mistake-section .section-content {
-  background: #fef0f0;
-  padding: 12px 16px;
-  border-radius: 6px;
-  border-left: 3px solid #f56c6c;
+@media (max-width: 860px) {
+  .knowledge-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-nav {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .knowledge-nav > span {
+    display: none;
+  }
+
+  .knowledge-nav button {
+    flex: 0 0 auto;
+  }
 }
 
-.advice-section .section-content {
-  background: #fdf6ec;
-  padding: 12px 16px;
-  border-radius: 6px;
-  border-left: 3px solid #e6a23c;
+@media (max-width: 640px) {
+  .knowledge-article {
+    padding: 18px 16px;
+  }
+
+  .knowledge-notes {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

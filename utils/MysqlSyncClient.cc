@@ -3,11 +3,15 @@
 #include <drogon/drogon.h>
 #include <mysql.h>
 
+#include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
 #include <cctype>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace
 {
@@ -84,7 +88,7 @@ struct DbConfig
     unsigned int port{3306};
     std::string dbname{"math_ai_review"};
     std::string user{"root"};
-    std::string password{"123456"};
+    std::string password;
 };
 
 void applyUrlConfig(DbConfig &config, const std::string &url);
@@ -239,7 +243,7 @@ DbConfig loadConfig()
 
 using MysqlPtr = std::unique_ptr<MYSQL, decltype(&mysql_close)>;
 
-MysqlPtr connect()
+MysqlPtr createConnection()
 {
     const auto config = loadConfig();
     MYSQL *raw = mysql_init(nullptr);
@@ -286,8 +290,206 @@ MysqlPtr connect()
         throw Error(mysql_error(conn.get()));
     }
 
-    mysql_set_character_set(conn.get(), "utf8mb4");
+    if (mysql_set_character_set(conn.get(), "utf8mb4") != 0)
+    {
+        throw Error(mysql_error(conn.get()));
+    }
+
+    static const std::string normalizeSqlMode =
+        "SET SESSION sql_mode = TRIM(BOTH ',' FROM REPLACE(CONCAT(',', @@SESSION.sql_mode, ','), "
+        "',NO_BACKSLASH_ESCAPES,', ','))";
+    if (mysql_real_query(conn.get(), normalizeSqlMode.c_str(),
+                         static_cast<unsigned long>(normalizeSqlMode.size())) != 0)
+    {
+        throw Error(mysql_error(conn.get()));
+    }
     return conn;
+}
+
+class ConnectionPool;
+
+class ConnectionLease
+{
+  public:
+    ConnectionLease(MYSQL *connection, ConnectionPool *pool)
+        : connection_(connection), pool_(pool)
+    {
+    }
+    ConnectionLease(const ConnectionLease &) = delete;
+    ConnectionLease &operator=(const ConnectionLease &) = delete;
+    ConnectionLease(ConnectionLease &&other) noexcept
+        : connection_(other.connection_), pool_(other.pool_), healthy_(other.healthy_)
+    {
+        other.connection_ = nullptr;
+    }
+    ~ConnectionLease();
+
+    MYSQL *get() const { return connection_; }
+    void invalidate() { healthy_ = false; }
+
+  private:
+    MYSQL *connection_{};
+    ConnectionPool *pool_{};
+    bool healthy_{true};
+};
+
+class ConnectionPool
+{
+  public:
+    ConnectionPool()
+        : maximumSize_(std::clamp<std::size_t>(getenvUInt("DB_POOL_SIZE", 8), 1, 64)),
+          acquireTimeout_(std::chrono::milliseconds(
+              std::clamp<std::size_t>(getenvUInt("DB_POOL_ACQUIRE_TIMEOUT_MS", 3000), 100, 30000)))
+    {
+    }
+
+    ~ConnectionPool()
+    {
+        for (auto *connection : idle_)
+        {
+            mysql_close(connection);
+        }
+    }
+
+    ConnectionLease acquire()
+    {
+        while (true)
+        {
+            MYSQL *connection = nullptr;
+            bool createNew = false;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                if (!available_.wait_for(lock, acquireTimeout_,
+                                         [this] { return !idle_.empty() || total_ < maximumSize_; }))
+                {
+                    throw mathai::utils::mysql::Error("database connection pool exhausted");
+                }
+                if (!idle_.empty())
+                {
+                    connection = idle_.back();
+                    idle_.pop_back();
+                }
+                else
+                {
+                    ++total_;
+                    createNew = true;
+                }
+            }
+
+            if (createNew)
+            {
+                try
+                {
+                    connection = createConnection().release();
+                }
+                catch (...)
+                {
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    --total_;
+                    available_.notify_one();
+                    throw;
+                }
+            }
+            else if (mysql_ping(connection) != 0)
+            {
+                mysql_close(connection);
+                std::lock_guard<std::mutex> lock(mutex_);
+                --total_;
+                available_.notify_one();
+                continue;
+            }
+            return ConnectionLease(connection, this);
+        }
+    }
+
+    void release(MYSQL *connection, bool healthy)
+    {
+        if (!connection)
+        {
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (healthy)
+        {
+            idle_.push_back(connection);
+        }
+        else
+        {
+            mysql_close(connection);
+            --total_;
+        }
+        available_.notify_one();
+    }
+
+  private:
+    std::mutex mutex_;
+    std::condition_variable available_;
+    std::vector<MYSQL *> idle_;
+    std::size_t total_{0};
+    std::size_t maximumSize_;
+    std::chrono::milliseconds acquireTimeout_;
+};
+
+ConnectionLease::~ConnectionLease()
+{
+    if (pool_)
+    {
+        pool_->release(connection_, healthy_);
+    }
+}
+
+ConnectionPool &connectionPool()
+{
+    static ConnectionPool pool;
+    return pool;
+}
+
+Result executeOnConnection(MYSQL *connection, const std::string &sql)
+{
+    if (mysql_real_query(connection, sql.c_str(), static_cast<unsigned long>(sql.size())) != 0)
+    {
+        throw Error(mysql_error(connection));
+    }
+
+    Result output;
+    output.affectedRows = mysql_affected_rows(connection);
+    output.insertId = mysql_insert_id(connection);
+
+    std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> res(mysql_store_result(connection),
+                                                                 mysql_free_result);
+    if (!res)
+    {
+        if (mysql_errno(connection) != 0)
+        {
+            throw Error(mysql_error(connection));
+        }
+        return output;
+    }
+
+    const auto fieldCount = mysql_num_fields(res.get());
+    MYSQL_FIELD *fields = mysql_fetch_fields(res.get());
+    MYSQL_ROW mysqlRow;
+    while ((mysqlRow = mysql_fetch_row(res.get())) != nullptr)
+    {
+        unsigned long *lengths = mysql_fetch_lengths(res.get());
+        Row row;
+        for (unsigned int i = 0; i < fieldCount; ++i)
+        {
+            const std::string fieldName = fields[i].name;
+            if (mysqlRow[i] == nullptr)
+            {
+                row.nullFields.insert(fieldName);
+                row.values[fieldName] = "";
+            }
+            else
+            {
+                row.values[fieldName] = std::string(mysqlRow[i], lengths[i]);
+            }
+        }
+        output.rows.push_back(std::move(row));
+    }
+    return output;
 }
 
 } // namespace
@@ -342,51 +544,46 @@ int Row::getInt(const std::string &field, int fallback) const
 
 Result execute(const std::string &sql)
 {
-    auto conn = connect();
-    if (mysql_real_query(conn.get(), sql.c_str(), static_cast<unsigned long>(sql.size())) != 0)
+    auto conn = connectionPool().acquire();
+    return executeOnConnection(conn.get(), sql);
+}
+
+std::vector<Result> executeTransaction(const std::vector<std::string> &statements)
+{
+    auto conn = connectionPool().acquire();
+    if (mysql_autocommit(conn.get(), 0) != 0)
     {
         throw Error(mysql_error(conn.get()));
     }
 
-    Result output;
-    output.affectedRows = mysql_affected_rows(conn.get());
-    output.insertId = mysql_insert_id(conn.get());
-
-    std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)> res(mysql_store_result(conn.get()),
-                                                                 mysql_free_result);
-    if (!res)
+    std::vector<Result> results;
+    results.reserve(statements.size());
+    try
     {
-        if (mysql_errno(conn.get()) != 0)
+        for (const auto &statement : statements)
+        {
+            results.push_back(executeOnConnection(conn.get(), statement));
+        }
+        if (mysql_commit(conn.get()) != 0)
         {
             throw Error(mysql_error(conn.get()));
         }
-        return output;
-    }
-
-    const auto fieldCount = mysql_num_fields(res.get());
-    MYSQL_FIELD *fields = mysql_fetch_fields(res.get());
-    MYSQL_ROW mysqlRow;
-    while ((mysqlRow = mysql_fetch_row(res.get())) != nullptr)
-    {
-        unsigned long *lengths = mysql_fetch_lengths(res.get());
-        Row row;
-        for (unsigned int i = 0; i < fieldCount; ++i)
+        if (mysql_autocommit(conn.get(), 1) != 0)
         {
-            const std::string fieldName = fields[i].name;
-            if (mysqlRow[i] == nullptr)
-            {
-                row.nullFields.insert(fieldName);
-                row.values[fieldName] = "";
-            }
-            else
-            {
-                row.values[fieldName] = std::string(mysqlRow[i], lengths[i]);
-            }
+            conn.invalidate();
+            throw Error(mysql_error(conn.get()));
         }
-        output.rows.push_back(std::move(row));
     }
-
-    return output;
+    catch (...)
+    {
+        mysql_rollback(conn.get());
+        if (mysql_autocommit(conn.get(), 1) != 0)
+        {
+            conn.invalidate();
+        }
+        throw;
+    }
+    return results;
 }
 
 std::string escape(const std::string &value)
@@ -395,11 +592,19 @@ std::string escape(const std::string &value)
     escaped.reserve(value.size() * 2);
     for (const auto ch : value)
     {
-        if (ch == '\'' || ch == '\\')
+        switch (ch)
         {
-            escaped.push_back('\\');
+        case '\0': escaped += "\\0"; break;
+        case '\n': escaped += "\\n"; break;
+        case '\r': escaped += "\\r"; break;
+        case '\\': escaped += "\\\\"; break;
+        case '\'': escaped += "\\'"; break;
+        case '"': escaped += "\\\""; break;
+        case '\x1a': escaped += "\\Z"; break;
+        default:
+            escaped.push_back(ch);
+            break;
         }
-        escaped.push_back(ch);
     }
     return escaped;
 }

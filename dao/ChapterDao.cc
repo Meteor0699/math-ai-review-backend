@@ -68,6 +68,31 @@ void ChapterDao::listActiveByCourse(long long courseId,
     }
 }
 
+void ChapterDao::findActiveById(long long id,
+                                JsonCallback onSuccess,
+                                ErrorCallback onError) const
+{
+    try
+    {
+        const auto result = mathai::utils::mysql::execute(
+            "SELECT ch.id, ch.course_id, ch.parent_id, ch.title, ch.description, ch.sort_order, ch.status, "
+            "c.name AS course_name FROM chapter ch "
+            "INNER JOIN course c ON ch.course_id = c.id "
+            "WHERE ch.id = " + std::to_string(id) + " AND ch.status = 1 AND c.status = 1 LIMIT 1");
+
+        if (result.rows.empty())
+        {
+            onSuccess(Json::Value(Json::nullValue));
+            return;
+        }
+        onSuccess(chapterRowToJsonWithCourseName(result.rows.front()));
+    }
+    catch (const std::exception &exception)
+    {
+        onError(exception.what());
+    }
+}
+
 void ChapterDao::listAll(const drogon::HttpRequestPtr &request,
                          int page, int pageSize,
                          JsonCallback onSuccess, ErrorCallback onError) const

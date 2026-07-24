@@ -44,6 +44,12 @@ class UserDao
                         CountCallback onSuccess,
                         ErrorCallback onError) const;
 
+    void recordSuccessfulLogin(long long id,
+                               int authVersion,
+                               const std::string &upgradedPasswordHash,
+                               CountCallback onSuccess,
+                               ErrorCallback onError) const;
+
     void disable(long long id,
                  CountCallback onSuccess,
                  ErrorCallback onError) const;

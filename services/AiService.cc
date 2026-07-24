@@ -5,8 +5,11 @@
 #include <algorithm>
 #include <cctype>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "utils/JsonResponse.h"
 
@@ -15,13 +18,58 @@ namespace mathai::services
 namespace
 {
 
+drogon::HttpResponsePtr databaseErrorResponse(const std::string &message)
+{
+    LOG_ERROR << "AI explanation database error: " << message;
+    return mathai::utils::jsonResponse(500, "database error",
+                                       Json::Value(Json::objectValue),
+                                       drogon::k500InternalServerError);
+}
+
 void databaseError(const std::shared_ptr<AiService::ResponseCallback> &callback,
                    const std::string &message)
 {
-    LOG_ERROR << "AI explanation database error: " << message;
-    (*callback)(mathai::utils::jsonResponse(500, "database error",
-                                            Json::Value(Json::objectValue),
-                                            drogon::k500InternalServerError));
+    (*callback)(databaseErrorResponse(message));
+}
+
+class ExplanationFlights
+{
+  public:
+    using CallbackPtr = std::shared_ptr<AiService::ResponseCallback>;
+
+    bool join(long long questionId, CallbackPtr callback)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto &callbacks = callbacks_[questionId];
+        callbacks.push_back(std::move(callback));
+        return callbacks.size() == 1;
+    }
+
+    void complete(long long questionId, const drogon::HttpResponsePtr &response)
+    {
+        std::vector<CallbackPtr> callbacks;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            const auto found = callbacks_.find(questionId);
+            if (found == callbacks_.end()) return;
+            callbacks = std::move(found->second);
+            callbacks_.erase(found);
+        }
+        for (const auto &callback : callbacks)
+        {
+            (*callback)(response);
+        }
+    }
+
+  private:
+    std::mutex mutex_;
+    std::unordered_map<long long, std::vector<CallbackPtr>> callbacks_;
+};
+
+ExplanationFlights &explanationFlights()
+{
+    static ExplanationFlights flights;
+    return flights;
 }
 
 std::string trim(const std::string &value)
@@ -53,38 +101,53 @@ std::string safeText(const Json::Value &value, const char *field)
 void AiService::explainQuestion(long long questionId, ResponseCallback callback) const
 {
     auto cb = std::make_shared<ResponseCallback>(std::move(callback));
+    if (!explanationFlights().join(questionId, cb))
+    {
+        return;
+    }
+    const auto finish = [questionId](const drogon::HttpResponsePtr &response) {
+        explanationFlights().complete(questionId, response);
+    };
 
-    aiExplanationDao_.findExisting(
+    aiExplanationDao_.findQuestionContext(
         questionId,
-        [this, questionId, cb](Json::Value existing) {
-            if (!existing.isNull())
+        [this, questionId, finish](Json::Value questionContext) {
+            if (questionContext.isNull())
             {
-                (*cb)(mathai::utils::jsonResponse(200, "success", existing));
+                finish(mathai::utils::jsonResponse(404, "question not found",
+                                                   Json::Value(Json::objectValue),
+                                                   drogon::k404NotFound));
                 return;
             }
 
-            aiExplanationDao_.findQuestionContext(
+            const auto prompt = buildPrompt(questionContext);
+            const auto modelName = aiClient_.modelName();
+            aiExplanationDao_.findExisting(
                 questionId,
-                [this, questionId, cb](Json::Value questionContext) {
-                    if (questionContext.isNull())
+                [this, questionId, prompt, modelName, finish](Json::Value existing) {
+                    if (!existing.isNull() &&
+                        existing["modelName"].asString() == modelName &&
+                        existing["prompt"].asString() == prompt)
                     {
-                        (*cb)(mathai::utils::jsonResponse(404, "question not found",
-                                                          Json::Value(Json::objectValue),
-                                                          drogon::k404NotFound));
+                        existing.removeMember("prompt");
+                        finish(mathai::utils::jsonResponse(200, "success", existing));
                         return;
                     }
 
-                    const auto prompt = buildPrompt(questionContext);
                     aiClient_.generateExplanation(
                         prompt,
-                        [this, questionId, prompt, cb](mathai::clients::AiResult result) {
+                        [this, questionId, prompt, finish](mathai::clients::AiResult result) {
                             if (!result.success)
                             {
+                                LOG_ERROR << "AI generation failed for question " << questionId
+                                          << ": " << result.errorMessage;
                                 Json::Value data;
                                 data["questionId"] = Json::Int64(questionId);
-                                data["error"] = result.errorMessage;
-                                (*cb)(mathai::utils::jsonResponse(502, "ai generation failed", data,
-                                                                  drogon::k502BadGateway));
+                                finish(mathai::utils::jsonResponse(
+                                    result.busy ? 503 : 502,
+                                    result.busy ? "ai service is busy" : "ai generation failed",
+                                    data,
+                                    result.busy ? drogon::k503ServiceUnavailable : drogon::k502BadGateway));
                                 return;
                             }
 
@@ -93,21 +156,17 @@ void AiService::explainQuestion(long long questionId, ResponseCallback callback)
                                 result.modelName,
                                 prompt,
                                 result.content,
-                                [cb](Json::Value saved) {
-                                    (*cb)(mathai::utils::jsonResponse(200, "success", saved));
+                                [finish](Json::Value saved) {
+                                    finish(mathai::utils::jsonResponse(200, "success", saved));
                                 },
-                                [cb](const std::string &message) {
-                                    databaseError(cb, message);
+                                [finish](const std::string &message) {
+                                    finish(databaseErrorResponse(message));
                                 });
                         });
                 },
-                [cb](const std::string &message) {
-                    databaseError(cb, message);
-                });
+                [finish](const std::string &message) { finish(databaseErrorResponse(message)); });
         },
-        [cb](const std::string &message) {
-            databaseError(cb, message);
-        });
+        [finish](const std::string &message) { finish(databaseErrorResponse(message)); });
 }
 
 void AiService::followUpQuestion(long long questionId,
@@ -152,11 +211,15 @@ void AiService::followUpQuestion(long long questionId,
                         [questionId, studentQuestion, cb](mathai::clients::AiResult result) {
                             if (!result.success)
                             {
+                                LOG_ERROR << "AI follow-up failed for question " << questionId
+                                          << ": " << result.errorMessage;
                                 Json::Value data;
                                 data["questionId"] = Json::Int64(questionId);
-                                data["error"] = result.errorMessage;
-                                (*cb)(mathai::utils::jsonResponse(502, "ai generation failed", data,
-                                                                  drogon::k502BadGateway));
+                                (*cb)(mathai::utils::jsonResponse(
+                                    result.busy ? 503 : 502,
+                                    result.busy ? "ai service is busy" : "ai generation failed",
+                                    data,
+                                    result.busy ? drogon::k503ServiceUnavailable : drogon::k502BadGateway));
                                 return;
                             }
 

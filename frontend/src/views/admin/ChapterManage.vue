@@ -1,5 +1,5 @@
 <template>
-  <div class="chapter-manage">
+  <div class="app-page management-page chapter-manage">
     <div class="page-header">
       <h2>章节管理</h2>
       <el-button type="primary" @click="openDialog(null)">
@@ -9,7 +9,7 @@
     </div>
 
     <!-- 筛选 -->
-    <el-form inline style="margin-bottom: 16px">
+    <el-form inline class="filter-bar">
       <el-form-item label="所属课程">
         <el-select v-model="filterCourseId" placeholder="全部课程" clearable @change="fetchList">
           <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
@@ -168,9 +168,3 @@ async function handleDelete(row) {
   } catch { /* 取消 */ }
 }
 </script>
-
-<style scoped>
-.chapter-manage { max-width: 1200px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { font-size: 20px; color: #303133; }
-</style>

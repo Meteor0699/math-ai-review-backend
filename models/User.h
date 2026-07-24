@@ -15,6 +15,7 @@ struct User
     std::string studentNo;
     std::string role;
     int status{};
+    int authVersion{1};
 };
 
 } // namespace mathai::models

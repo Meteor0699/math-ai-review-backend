@@ -7,15 +7,15 @@
     }
   ],
   "app": {
-    "number_of_threads": 1,
+    "number_of_threads": 4,
     "enable_session": false,
+    "client_max_body_size": "21M",
     "log_path": "./logs",
     "logfile_base_name": "math-ai-review-backend",
     "log_size_limit": 100000000,
-    "log_level": "DEBUG"
+    "log_level": "INFO"
   },
   "custom_config": {
-    "jwt_secret": "change_this_secret_in_local_development",
     "jwt_expire_hours": 24,
     "upload_dir": "./uploads/papers",
     "ai": {

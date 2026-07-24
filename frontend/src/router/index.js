@@ -1,34 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useUserStore } from '../stores/user'
+import { readToken, readUser } from '../utils/authStorage'
 
-// 学生端页面
-import StudentLayout from '../layouts/StudentLayout.vue'
-import Login from '../views/Login.vue'
-import Home from '../views/student/Home.vue'
-import CourseList from '../views/student/CourseList.vue'
-import CourseDetail from '../views/student/CourseDetail.vue'
-import ChapterDetail from '../views/student/ChapterDetail.vue'
-import KnowledgeDetail from '../views/student/KnowledgeDetail.vue'
-import QuestionList from '../views/student/QuestionList.vue'
-import QuestionDetail from '../views/student/QuestionDetail.vue'
-import PaperList from '../views/student/PaperList.vue'
-import StudyCenter from '../views/student/StudyCenter.vue'
-
-// 管理员端页面
-import AdminLayout from '../layouts/AdminLayout.vue'
-import AdminHome from '../views/admin/AdminHome.vue'
-import CourseManage from '../views/admin/CourseManage.vue'
-import ChapterManage from '../views/admin/ChapterManage.vue'
-import KnowledgeManage from '../views/admin/KnowledgeManage.vue'
-import QuestionManage from '../views/admin/QuestionManage.vue'
-import PaperManage from '../views/admin/PaperManage.vue'
-import UserManage from '../views/admin/UserManage.vue'
+const StudentLayout = () => import('../layouts/StudentLayout.vue')
+const AdminLayout = () => import('../layouts/AdminLayout.vue')
 
 const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: Login,
+    component: () => import('../views/Login.vue'),
     meta: { noAuth: true }
   },
   {
@@ -36,15 +16,15 @@ const routes = [
     component: StudentLayout,
     redirect: '/home',
     children: [
-      { path: 'home', name: 'Home', component: Home },
-      { path: 'courses', name: 'CourseList', component: CourseList },
-      { path: 'courses/:courseId', name: 'CourseDetail', component: CourseDetail },
-      { path: 'chapters/:chapterId', name: 'ChapterDetail', component: ChapterDetail },
-      { path: 'knowledge/:chapterId', name: 'KnowledgeDetail', component: KnowledgeDetail },
-      { path: 'questions', name: 'QuestionList', component: QuestionList },
-      { path: 'questions/:questionId', name: 'QuestionDetail', component: QuestionDetail },
-      { path: 'study', name: 'StudyCenter', component: StudyCenter },
-      { path: 'papers', name: 'PaperList', component: PaperList }
+      { path: 'home', name: 'Home', component: () => import('../views/student/Home.vue') },
+      { path: 'courses', name: 'CourseList', component: () => import('../views/student/CourseList.vue') },
+      { path: 'courses/:courseId', name: 'CourseDetail', component: () => import('../views/student/CourseDetail.vue') },
+      { path: 'chapters/:chapterId', name: 'ChapterDetail', component: () => import('../views/student/ChapterDetail.vue') },
+      { path: 'knowledge/:chapterId', name: 'KnowledgeDetail', component: () => import('../views/student/KnowledgeDetail.vue') },
+      { path: 'questions', name: 'QuestionList', component: () => import('../views/student/QuestionList.vue') },
+      { path: 'questions/:questionId', name: 'QuestionDetail', component: () => import('../views/student/QuestionDetail.vue') },
+      { path: 'study', name: 'StudyCenter', component: () => import('../views/student/StudyCenter.vue') },
+      { path: 'papers', name: 'PaperList', component: () => import('../views/student/PaperList.vue') }
     ]
   },
   {
@@ -53,13 +33,13 @@ const routes = [
     redirect: '/admin/home',
     meta: { requiresAdmin: true },
     children: [
-      { path: 'home', name: 'AdminHome', component: AdminHome },
-      { path: 'courses', name: 'CourseManage', component: CourseManage },
-      { path: 'chapters', name: 'ChapterManage', component: ChapterManage },
-      { path: 'knowledge', name: 'KnowledgeManage', component: KnowledgeManage },
-      { path: 'questions', name: 'QuestionManage', component: QuestionManage },
-      { path: 'papers', name: 'PaperManage', component: PaperManage },
-      { path: 'users', name: 'UserManage', component: UserManage }
+      { path: 'home', name: 'AdminHome', component: () => import('../views/admin/AdminHome.vue') },
+      { path: 'courses', name: 'CourseManage', component: () => import('../views/admin/CourseManage.vue') },
+      { path: 'chapters', name: 'ChapterManage', component: () => import('../views/admin/ChapterManage.vue') },
+      { path: 'knowledge', name: 'KnowledgeManage', component: () => import('../views/admin/KnowledgeManage.vue') },
+      { path: 'questions', name: 'QuestionManage', component: () => import('../views/admin/QuestionManage.vue') },
+      { path: 'papers', name: 'PaperManage', component: () => import('../views/admin/PaperManage.vue') },
+      { path: 'users', name: 'UserManage', component: () => import('../views/admin/UserManage.vue') }
     ]
   }
 ]
@@ -71,8 +51,8 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  const user = JSON.parse(localStorage.getItem('user') || 'null')
+  const token = readToken()
+  const user = readUser()
 
   // 不需要登录的页面
   if (to.meta.noAuth) {

@@ -23,6 +23,13 @@ export function getChapters(courseId, params) {
   })
 }
 
+export function getChapterDetail(chapterId) {
+  return request({
+    url: `/chapters/${chapterId}`,
+    method: 'get'
+  })
+}
+
 export function getKnowledgePoints(chapterId, params) {
   return request({
     url: `/chapters/${chapterId}/knowledge-points`,
@@ -42,6 +49,13 @@ export function getQuestionList(params) {
 export function getQuestionDetail(questionId) {
   return request({
     url: `/questions/${questionId}`,
+    method: 'get'
+  })
+}
+
+export function getQuestionAnswer(questionId) {
+  return request({
+    url: `/questions/${questionId}/answer`,
     method: 'get'
   })
 }

@@ -4,21 +4,10 @@
 #include <optional>
 
 #include "utils/JsonResponse.h"
-#include "utils/JwtUtil.h"
+#include "utils/AuthContext.h"
 
 namespace
 {
-
-std::optional<mathai::utils::JwtClaims> claimsFromRequest(const drogon::HttpRequestPtr &request)
-{
-    const auto authHeader = request->getHeader("Authorization");
-    const std::string prefix = "Bearer ";
-    if (authHeader.rfind(prefix, 0) != 0)
-    {
-        return std::nullopt;
-    }
-    return mathai::utils::verifyJwt(authHeader.substr(prefix.size()));
-}
 
 int intParam(const drogon::HttpRequestPtr &request, const std::string &name, int fallback)
 {
@@ -41,15 +30,13 @@ void withClaims(const drogon::HttpRequestPtr &request,
                 const std::function<void(const mathai::utils::JwtClaims &)> &handler,
                 const std::function<void(const drogon::HttpResponsePtr &)> &callback)
 {
-    const auto claims = claimsFromRequest(request);
-    if (!claims)
+    const auto auth = mathai::utils::authenticateRequest(request);
+    if (auth.state != mathai::utils::AuthState::Ok)
     {
-        callback(mathai::utils::jsonResponse(401, "invalid token",
-                                             Json::Value(Json::objectValue),
-                                             drogon::k401Unauthorized));
+        callback(mathai::utils::authErrorResponse(auth.state));
         return;
     }
-    handler(*claims);
+    handler(*auth.claims);
 }
 
 Json::Value bodyOrEmpty(const drogon::HttpRequestPtr &request)

@@ -13,6 +13,7 @@ struct AiResult
     std::string content;
     std::string errorMessage;
     std::string modelName;
+    bool busy{};
 };
 
 class AiClient
@@ -20,6 +21,7 @@ class AiClient
   public:
     using Callback = std::function<void(AiResult)>;
 
+    std::string modelName() const;
     void generateExplanation(const std::string &prompt, Callback callback) const;
 };
 

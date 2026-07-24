@@ -1,98 +1,89 @@
 <template>
-  <el-container class="layout-container">
-    <!-- 顶部导航 -->
-    <el-header class="layout-header">
-      <div class="header-left">
-        <h2 class="header-title">
-          <el-icon><Setting /></el-icon>
-          管理后台
-        </h2>
+  <div class="admin-shell">
+    <aside class="admin-sidebar">
+      <div class="admin-brand"><AppLogo to="/admin/home" /></div>
+      <div class="admin-label">管理工作台</div>
+      <el-menu :default-active="activeMenu" router class="admin-menu">
+        <el-menu-item v-for="item in navigation" :key="item.path" :index="item.path">
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </el-menu-item>
+      </el-menu>
+    </aside>
+
+    <header class="admin-header">
+      <button class="menu-button" type="button" aria-label="打开管理导航" @click="drawerOpen = true">
+        <el-icon><Menu /></el-icon>
+      </button>
+      <div>
+        <strong>{{ currentTitle }}</strong>
+        <span>管理后台</span>
       </div>
-      <div class="header-right">
-        <el-button text @click="$router.push('/home')">
-          <el-icon><View /></el-icon>
-          回到前台
+      <div class="admin-actions">
+        <el-button text @click="router.push('/home')">
+          <el-icon><Back /></el-icon>返回学生端
         </el-button>
-        <el-dropdown>
-          <span class="user-info">
-            <el-icon><UserFilled /></el-icon>
-            {{ userStore.realName || userStore.username }}
+        <el-dropdown trigger="click">
+          <button class="admin-profile" type="button">
+            <el-avatar :size="34">{{ avatarText }}</el-avatar>
+            <span>{{ userStore.realName || userStore.username }}</span>
             <el-icon><ArrowDown /></el-icon>
-          </span>
+          </button>
           <template #dropdown>
-            <el-dropdown-item @click="handleLogout">
-              <el-icon><SwitchButton /></el-icon>
-              退出登录
-            </el-dropdown-item>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleLogout">
+                <el-icon><SwitchButton /></el-icon>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
           </template>
         </el-dropdown>
       </div>
-    </el-header>
+    </header>
 
-    <el-container>
-      <!-- 侧边菜单 -->
-      <el-aside width="220px" class="layout-aside">
-        <el-menu
-          :default-active="activeMenu"
-          router
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#409EFF"
-        >
-          <el-menu-item index="/admin/home">
-            <el-icon><HomeFilled /></el-icon>
-            <span>首页</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/courses">
-            <el-icon><Collection /></el-icon>
-            <span>课程管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/chapters">
-            <el-icon><Folder /></el-icon>
-            <span>章节管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/knowledge">
-            <el-icon><Reading /></el-icon>
-            <span>知识点管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/questions">
-            <el-icon><Edit /></el-icon>
-            <span>题库管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/papers">
-            <el-icon><Document /></el-icon>
-            <span>试卷管理</span>
-          </el-menu-item>
-          <el-menu-item index="/admin/users">
-            <el-icon><User /></el-icon>
-            <span>用户管理</span>
-          </el-menu-item>
-        </el-menu>
-      </el-aside>
+    <main class="admin-content"><router-view /></main>
 
-      <!-- 主内容区 -->
-      <el-main class="layout-main">
-        <router-view />
-      </el-main>
-    </el-container>
-  </el-container>
+    <el-drawer v-model="drawerOpen" direction="ltr" size="280px" :with-header="false">
+      <div class="admin-brand"><AppLogo to="/admin/home" /></div>
+      <nav class="drawer-navigation">
+        <router-link v-for="item in navigation" :key="item.path" :to="item.path" @click="drawerOpen = false">
+          <el-icon><component :is="item.icon" /></el-icon>
+          <span>{{ item.label }}</span>
+        </router-link>
+      </nav>
+    </el-drawer>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '../stores/user'
+import { ArrowDown, Back, Menu } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
+import AppLogo from '../components/AppLogo.vue'
+import { useUserStore } from '../stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const drawerOpen = ref(false)
+
+const navigation = [
+  { path: '/admin/home', label: '数据概览', icon: 'DataBoard' },
+  { path: '/admin/courses', label: '课程管理', icon: 'Collection' },
+  { path: '/admin/chapters', label: '章节管理', icon: 'Folder' },
+  { path: '/admin/knowledge', label: '知识点管理', icon: 'Reading' },
+  { path: '/admin/questions', label: '题库管理', icon: 'EditPen' },
+  { path: '/admin/papers', label: '试卷管理', icon: 'Document' },
+  { path: '/admin/users', label: '用户管理', icon: 'User' }
+]
 
 const activeMenu = computed(() => route.path)
+const currentTitle = computed(() => navigation.find((item) => route.path.startsWith(item.path))?.label || '管理后台')
+const avatarText = computed(() => (userStore.realName || userStore.username || '管').slice(0, 1))
 
 function handleLogout() {
-  ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-    confirmButtonText: '确定',
+  ElMessageBox.confirm('确定退出当前账号吗？', '退出登录', {
+    confirmButtonText: '退出',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
@@ -103,54 +94,171 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.layout-container {
-  height: 100vh;
+.admin-shell {
+  min-height: 100vh;
+  padding-left: var(--sidebar-width);
+  background: var(--color-background);
 }
 
-.layout-header {
+.admin-sidebar {
+  position: fixed;
+  z-index: var(--z-header);
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.admin-brand {
   display: flex;
-  justify-content: space-between;
+  height: var(--header-height);
   align-items: center;
-  background-color: #2c3e50;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.admin-label {
+  padding: 22px 24px 8px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.admin-menu {
+  padding: 8px 12px;
+  border: 0;
+}
+
+.admin-menu :deep(.el-menu-item) {
+  height: 44px;
+  margin-bottom: 5px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.admin-menu :deep(.el-menu-item.is-active) {
   color: #fff;
-  padding: 0 20px;
-  height: 60px;
+  background: var(--color-primary);
+  font-weight: 600;
 }
 
-.header-title {
+.admin-header {
+  position: sticky;
+  z-index: calc(var(--z-header) - 1);
+  top: 0;
   display: flex;
+  height: var(--header-height);
   align-items: center;
-  gap: 8px;
-  font-size: 18px;
+  justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.96);
 }
 
-.header-right {
+.admin-header > div:first-of-type {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header strong {
+  font-size: var(--text-md);
+}
+
+.admin-header span {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.admin-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.user-info {
+.admin-profile {
   display: flex;
+  min-height: 44px;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
   cursor: pointer;
-  color: #fff;
-  font-size: 14px;
 }
 
-.layout-aside {
-  background-color: #304156;
-  overflow-y: auto;
+.admin-content {
+  min-height: calc(100vh - var(--header-height));
+  padding: 28px;
 }
 
-.layout-aside .el-menu {
-  border-right: none;
+.menu-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
 }
 
-.layout-main {
-  background-color: #f0f2f5;
-  padding: 20px;
-  overflow-y: auto;
+.drawer-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 0;
+}
+
+.drawer-navigation a {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.drawer-navigation a.router-link-active {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    padding-left: 0;
+  }
+
+  .admin-sidebar {
+    display: none;
+  }
+
+  .admin-header {
+    height: 56px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .menu-button {
+    display: inline-flex;
+  }
+
+  .admin-header > div:first-of-type {
+    flex: 1;
+  }
+
+  .admin-actions .el-button,
+  .admin-profile > span,
+  .admin-profile > .el-icon {
+    display: none;
+  }
+
+  .admin-content {
+    padding: 18px 14px 32px;
+  }
 }
 </style>

@@ -1,13 +1,13 @@
 #include "controllers/AuthController.h"
 
-#include "utils/JwtUtil.h"
+#include "utils/AuthContext.h"
 #include "utils/JsonResponse.h"
 
 void AuthController::login(const drogon::HttpRequestPtr &request,
                            std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
     const auto json = request->getJsonObject();
-    if (!json || !json->isMember("username") || !json->isMember("password"))
+    if (!json || !(*json)["username"].isString() || !(*json)["password"].isString())
     {
         callback(mathai::utils::jsonResponse(400, "invalid request body",
                                              Json::Value(Json::objectValue),
@@ -38,28 +38,16 @@ void AuthController::registerUser(const drogon::HttpRequestPtr &request,
 void AuthController::me(const drogon::HttpRequestPtr &request,
                         std::function<void(const drogon::HttpResponsePtr &)> &&callback)
 {
-    auto authHeader = request->getHeader("Authorization");
-    const std::string prefix = "Bearer ";
-    if (authHeader.rfind(prefix, 0) != 0)
+    const auto auth = mathai::utils::authenticateRequest(request);
+    if (auth.state != mathai::utils::AuthState::Ok)
     {
-        callback(mathai::utils::jsonResponse(401, "missing token",
-                                             Json::Value(Json::objectValue),
-                                             drogon::k401Unauthorized));
-        return;
-    }
-
-    const auto claims = mathai::utils::verifyJwt(authHeader.substr(prefix.size()));
-    if (!claims)
-    {
-        callback(mathai::utils::jsonResponse(401, "invalid token",
-                                             Json::Value(Json::objectValue),
-                                             drogon::k401Unauthorized));
+        callback(mathai::utils::authErrorResponse(auth.state));
         return;
     }
 
     Json::Value data;
-    data["id"] = Json::Int64(claims->userId);
-    data["username"] = claims->username;
-    data["role"] = claims->role;
+    data["id"] = Json::Int64(auth.claims->userId);
+    data["username"] = auth.claims->username;
+    data["role"] = auth.claims->role;
     callback(mathai::utils::jsonResponse(200, "success", data));
 }

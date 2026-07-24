@@ -50,6 +50,26 @@ void ChapterService::listActiveByCourse(long long courseId, int page, int pageSi
         });
 }
 
+void ChapterService::detail(long long id, ResponseCallback callback) const
+{
+    auto cb = std::make_shared<ResponseCallback>(std::move(callback));
+    chapterDao_.findActiveById(
+        id,
+        [cb](Json::Value data) {
+            if (data.isNull())
+            {
+                (*cb)(mathai::utils::jsonResponse(404, "chapter not found",
+                                                  Json::Value(Json::objectValue),
+                                                  drogon::k404NotFound));
+                return;
+            }
+            (*cb)(mathai::utils::jsonResponse(200, "success", data));
+        },
+        [cb](const std::string &message) {
+            databaseError(cb, message);
+        });
+}
+
 void ChapterService::listAll(const drogon::HttpRequestPtr &request, int page, int pageSize, ResponseCallback callback) const
 {
     auto cb = std::make_shared<ResponseCallback>(std::move(callback));
