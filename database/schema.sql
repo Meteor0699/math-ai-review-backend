@@ -2,6 +2,9 @@
 -- MySQL 8.0 schema for 高校数学课程 AI 辅助复习 Web 平台
 
 -- DEVELOPMENT INITIALIZATION ONLY: this file drops existing tables.
+-- Fresh installs must stay in sync with database/migrations/*.sql: the two
+-- agent-mode tables created by V004__add_agent_conversations.sql are declared
+-- below as well.
 -- Never run it against a production or shared database.
 CREATE DATABASE IF NOT EXISTS math_ai_review
   DEFAULT CHARACTER SET utf8mb4
@@ -12,6 +15,8 @@ USE math_ai_review;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS ai_message;
+DROP TABLE IF EXISTS ai_conversation;
 DROP TABLE IF EXISTS ai_explanation;
 DROP TABLE IF EXISTS wrong_question;
 DROP TABLE IF EXISTS question_attempt;
@@ -270,6 +275,42 @@ CREATE TABLE ai_explanation (
     FOREIGN KEY (question_id) REFERENCES question (id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI解析记录表';
+
+-- Agent 模式：题目页常驻 AI 面板的会话（docs/AGENT_MODE.md）
+-- 与 database/migrations/V004__add_agent_conversations.sql 保持一致。
+CREATE TABLE ai_conversation (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  user_id BIGINT NOT NULL COMMENT '用户ID',
+  question_id BIGINT NOT NULL COMMENT '题目ID',
+  message_count INT NOT NULL DEFAULT 0 COMMENT '消息条数',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_ai_conversation_user_question (user_id, question_id),
+  KEY idx_ai_conversation_user_updated (user_id, updated_at),
+  CONSTRAINT fk_ai_conversation_user
+    FOREIGN KEY (user_id) REFERENCES user (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ai_conversation_question
+    FOREIGN KEY (question_id) REFERENCES question (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent会话表';
+
+CREATE TABLE ai_message (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  conversation_id BIGINT NOT NULL COMMENT '所属会话ID',
+  role ENUM('user', 'assistant', 'tool') NOT NULL COMMENT '角色：user学生，assistant模型，tool工具结果',
+  content MEDIUMTEXT DEFAULT NULL COMMENT '消息正文',
+  tool_name VARCHAR(64) DEFAULT NULL COMMENT '工具名称',
+  tool_args TEXT DEFAULT NULL COMMENT '工具入参JSON',
+  tool_result MEDIUMTEXT DEFAULT NULL COMMENT '工具返回JSON',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  KEY idx_ai_message_conversation (conversation_id, id),
+  CONSTRAINT fk_ai_message_conversation
+    FOREIGN KEY (conversation_id) REFERENCES ai_conversation (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent消息表';
 
 INSERT INTO user (id, username, password_hash, real_name, student_no, role, status) VALUES
 (1, 'admin', 'sha256$math-ai-review$b9ef3da9ebe71810e3c5d67b311bf23ce15f70646de275e131db945ed7ff0555', '管理员', NULL, 'admin', 1);

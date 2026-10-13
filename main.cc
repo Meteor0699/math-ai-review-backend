@@ -6,6 +6,7 @@
 
 #include "controllers/AiController.h"
 #include "controllers/AdminStatsController.h"
+#include "controllers/AgentController.h"
 #include "controllers/AuthController.h"
 #include "controllers/ChapterController.h"
 #include "controllers/CourseController.h"
@@ -35,6 +36,7 @@ static void forceKeepControllers()
         &QuestionController::isAutoCreation,
         &PaperController::isAutoCreation,
         &AiController::isAutoCreation,
+        &AgentController::isAutoCreation,
         &StudyController::isAutoCreation,
         &UserController::isAutoCreation,
         &HealthController::isAutoCreation,

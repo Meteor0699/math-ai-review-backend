@@ -135,6 +135,9 @@
             <span>需要提示时再生成讲解，先给自己一点独立思考的时间。</span>
           </div>
         </section>
+
+        <!-- 常驻 AI 学习助手：多轮对话 + 流式输出 + 工具调用可视化 -->
+        <AgentPanel :key="questionId" :question-id="questionId" />
       </main>
 
       <aside class="study-panel">
@@ -170,6 +173,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowLeft, Hide, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import AgentPanel from '../../components/AgentPanel.vue'
 import FormulaContent from '../../components/FormulaContent.vue'
 import PageHeader from '../../components/PageHeader.vue'
 import {
