@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Single configuration generators (Ninja, Makefiles) leave CMAKE_BUILD_TYPE
+# empty by default, which compiles the whole backend without any optimization.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
+endif()
+
 find_package(Drogon CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 
@@ -44,6 +51,21 @@ target_include_directories(${PROJECT_NAME}
 )
 
 find_package(CURL REQUIRED)
+
+# Treat third party headers as system headers so that -Wall -Wextra reports on
+# this project's own sources only; the Drogon/trantor headers trip false
+# positive -Warray-bounds warnings when they get inlined into our code.
+foreach(dependency Drogon::Drogon CURL::libcurl OpenSSL::Crypto)
+    get_target_property(dependency_includes ${dependency} INTERFACE_INCLUDE_DIRECTORIES)
+    if(dependency_includes)
+        target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${dependency_includes})
+    endif()
+endforeach()
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4>
+)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE

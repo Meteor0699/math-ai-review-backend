@@ -373,16 +373,24 @@ void PaperController::detail(const drogon::HttpRequestPtr &request,
         const auto &row = result.rows[0];
         const auto visibility = row.getString("visibility", "public");
         const auto claims = claimsFromRequest(request);
+        const auto isAdmin = claims && claims->role == "admin";
+        if (row.getInt("status") != 1 && !isAdmin)
+        {
+            // Soft deleted papers stay reachable for administrators only; the
+            // list and download endpoints already hide them.
+            callback(mathai::utils::jsonResponse(404, "paper not found", Json::Value(Json::objectValue), drogon::k404NotFound));
+            return;
+        }
         if (visibility == "private")
         {
-            if (!claims || (claims->role != "admin" && claims->userId != row.getInt64("owner_user_id")))
+            if (!claims || (!isAdmin && claims->userId != row.getInt64("owner_user_id")))
             {
                 callback(mathai::utils::jsonResponse(403, "paper is private", Json::Value(Json::objectValue), drogon::k403Forbidden));
                 return;
             }
         }
         const auto includeOwnerDetails = claims &&
-            (claims->role == "admin" || claims->userId == row.getInt64("owner_user_id"));
+            (isAdmin || claims->userId == row.getInt64("owner_user_id"));
         callback(mathai::utils::jsonResponse(200, "success", paperRowToJson(row, includeOwnerDetails)));
     }
     catch (const std::exception &exception)

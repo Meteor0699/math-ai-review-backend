@@ -43,22 +43,27 @@ static void forceKeepControllers()
     (void)refs;
 }
 
-static std::filesystem::path findFrontendDist()
+// The document root does not move while the process is running, so it is
+// resolved once instead of issuing three filesystem probes per static request.
+static const std::filesystem::path &frontendDist()
 {
-    const std::filesystem::path candidates[] = {
-        "frontend_dist",
-        "frontend/dist",
-        "../frontend/dist",
-    };
+    static const std::filesystem::path root = [] {
+        const std::filesystem::path candidates[] = {
+            "frontend_dist",
+            "frontend/dist",
+            "../frontend/dist",
+        };
 
-    for (const auto &candidate : candidates)
-    {
-        if (std::filesystem::exists(candidate / "index.html"))
+        for (const auto &candidate : candidates)
         {
-            return candidate;
+            if (std::filesystem::exists(candidate / "index.html"))
+            {
+                return candidate;
+            }
         }
-    }
-    return {};
+        return std::filesystem::path{};
+    }();
+    return root;
 }
 
 static std::string trimLeadingSlash(const std::string &path)
@@ -124,7 +129,7 @@ static std::optional<std::filesystem::path> resolveFrontendPath(
 
 static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr &request)
 {
-    const auto root = findFrontendDist();
+    const auto &root = frontendDist();
     if (root.empty())
     {
         return mathai::utils::error(404, "api not found", drogon::k404NotFound);
@@ -138,6 +143,7 @@ static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr
     }
 
     auto target = *resolved;
+    auto servesShell = false;
     if (path == "/" || !std::filesystem::exists(target))
     {
         if (isStaticAssetPath(path))
@@ -145,11 +151,13 @@ static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr
             return mathai::utils::error(404, "resource not found", drogon::k404NotFound);
         }
         target = root / "index.html";
+        servesShell = true;
     }
 
     if (std::filesystem::is_directory(target))
     {
         target /= "index.html";
+        servesShell = true;
     }
 
     if (!std::filesystem::exists(target))
@@ -157,7 +165,25 @@ static drogon::HttpResponsePtr frontendFileResponse(const drogon::HttpRequestPtr
         return mathai::utils::error(404, "api not found", drogon::k404NotFound);
     }
 
-    return drogon::HttpResponse::newFileResponse(target.string(), "", drogon::CT_NONE, "");
+    auto response = drogon::HttpResponse::newFileResponse(target.string(), "", drogon::CT_NONE, "");
+    if (servesShell)
+    {
+        // The HTML shell points at content hashed bundles, so it must be
+        // revalidated on every load; caching it would keep serving the previous
+        // build after a deploy.
+        response->addHeader("Cache-Control", "no-cache");
+    }
+    else if (path.rfind("/assets/", 0) == 0)
+    {
+        // Vite emits content hashed file names, so these can never go stale
+        // under the same URL.
+        response->addHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
+    else
+    {
+        response->addHeader("Cache-Control", "public, max-age=86400");
+    }
+    return response;
 }
 
 static void registerFrontendRoot()

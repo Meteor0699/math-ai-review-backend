@@ -71,6 +71,7 @@ CREATE TABLE chapter (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
   KEY idx_chapter_course_sort (course_id, sort_order),
+  KEY idx_chapter_status_sort (status, sort_order, id),
   KEY idx_chapter_parent (parent_id),
   CONSTRAINT fk_chapter_course
     FOREIGN KEY (course_id) REFERENCES course (id)
@@ -98,6 +99,8 @@ CREATE TABLE knowledge_point (
   PRIMARY KEY (id),
   KEY idx_knowledge_course (course_id),
   KEY idx_knowledge_chapter_sort (chapter_id, sort_order),
+  KEY idx_knowledge_status_sort (status, sort_order, id),
+  KEY idx_knowledge_course_status_sort (course_id, status, sort_order, id),
   CONSTRAINT fk_knowledge_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -129,6 +132,8 @@ CREATE TABLE exam_paper (
   KEY idx_exam_paper_course_year (course_id, exam_year),
   KEY idx_exam_paper_owner_visibility (owner_user_id, visibility),
   KEY idx_exam_paper_status (status),
+  KEY idx_exam_paper_status_visibility_year (status, visibility, exam_year, id),
+  KEY idx_exam_paper_owner_status_year (owner_user_id, status, exam_year, id),
   CONSTRAINT fk_exam_paper_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -165,6 +170,9 @@ CREATE TABLE question (
   KEY idx_question_type_difficulty (question_type, difficulty),
   KEY idx_question_source_year (source_year),
   KEY idx_question_from_exam_paper (from_exam_paper),
+  KEY idx_question_status_sort (status, sort_order, id),
+  KEY idx_question_course_status_sort (course_id, status, sort_order, id),
+  KEY idx_question_chapter_status_sort (chapter_id, status, sort_order, id),
   CONSTRAINT fk_question_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -210,6 +218,7 @@ CREATE TABLE question_attempt (
   PRIMARY KEY (id),
   UNIQUE KEY uk_question_attempt_user_question (user_id, question_id),
   KEY idx_question_attempt_user_time (user_id, last_attempt_at),
+  KEY idx_question_attempt_user_time_id (user_id, last_attempt_at, id),
   KEY idx_question_attempt_question (question_id),
   CONSTRAINT fk_question_attempt_user
     FOREIGN KEY (user_id) REFERENCES user (id)
@@ -232,6 +241,7 @@ CREATE TABLE wrong_question (
   PRIMARY KEY (id),
   UNIQUE KEY uk_wrong_question_user_question (user_id, question_id),
   KEY idx_wrong_question_user_status_time (user_id, status, added_at),
+  KEY idx_wrong_question_user_status_added_id (user_id, status, added_at, id),
   KEY idx_wrong_question_question (question_id),
   CONSTRAINT fk_wrong_question_user
     FOREIGN KEY (user_id) REFERENCES user (id)

@@ -35,6 +35,10 @@ services:
         value: 8
       - key: DB_POOL_ACQUIRE_TIMEOUT_MS
         value: 3000
+      # Render terminates TLS and forwards the client address, so forwarded
+      # headers are the only way to keep per-client rate limits meaningful.
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
 
   # 前端服务（静态站点）
   - type: web
