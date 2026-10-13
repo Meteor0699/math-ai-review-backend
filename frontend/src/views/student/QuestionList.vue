@@ -180,9 +180,13 @@ function difficultyType(value) {
 </script>
 
 <style scoped>
+/* Flex + wrap instead of a 7 column grid. The grid needed ~1100px of content
+   width, so between roughly 1200px and 1400px viewports it pushed the whole
+   page into horizontal scrolling. Controls now shrink and wrap instead. */
 .filter-panel {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(130px, 0.7fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   padding: 16px;
   border: 1px solid var(--color-border);
@@ -190,9 +194,21 @@ function difficultyType(value) {
   background: var(--color-surface);
 }
 
+.filter-panel > .el-input:first-child {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.filter-panel > .el-input,
+.filter-panel > .el-select {
+  flex: 1 1 150px;
+  min-width: 132px;
+}
+
 .filter-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .result-header {
@@ -289,20 +305,16 @@ function difficultyType(value) {
   margin-top: 24px;
 }
 
-@media (max-width: 1200px) {
-  .filter-panel {
-    grid-template-columns: repeat(3, minmax(160px, 1fr));
-  }
-}
-
 @media (max-width: 700px) {
-  .filter-panel {
-    grid-template-columns: 1fr 1fr;
+  .filter-panel > .el-input,
+  .filter-panel > .el-select {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
-  .filter-panel > :first-child,
   .filter-actions {
-    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
   }
 
   .filter-actions .el-button {

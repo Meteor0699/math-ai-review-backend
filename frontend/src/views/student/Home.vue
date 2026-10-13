@@ -322,6 +322,8 @@ function handleImageError(event) {
   font-size: var(--text-md);
 }
 
+/* One line cut every course description mid sentence; two lines fit the whole
+   sentence for the seeded course data without making the row taller. */
 .course-row__content p {
   display: -webkit-box;
   overflow: hidden;
@@ -329,7 +331,7 @@ function handleImageError(event) {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
 }
 
 .course-row__content span {
@@ -452,6 +454,13 @@ function handleImageError(event) {
   .stats-grid,
   .quick-links {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The fixed 320px route card left the copy column only ~56px wide at tablet
+     widths, so the heading and buttons overflowed the hero. Stack it earlier. */
+  .welcome-panel {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
   }
 
   .home-columns {

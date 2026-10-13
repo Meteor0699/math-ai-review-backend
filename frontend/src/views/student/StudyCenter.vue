@@ -171,11 +171,24 @@ async function handleTabChange(name) {
   gap: 7px;
 }
 
+/* Flex + wrap: the previous 3 column grid had a ~620px minimum, which pushed
+   the panel (and the whole page) into horizontal scrolling between roughly
+   761px and 900px viewports. */
 .study-filters {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) 180px 180px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 6px 0 18px;
+}
+
+.study-filters > .el-input {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.study-filters > .el-select {
+  flex: 1 1 160px;
+  min-width: 140px;
 }
 
 .study-list {
@@ -249,17 +262,15 @@ async function handleTabChange(name) {
   margin-top: 22px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .study-panel {
     padding: 0 14px 16px;
   }
 
-  .study-filters {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .study-filters > :first-child {
-    grid-column: 1 / -1;
+  .study-filters > .el-input,
+  .study-filters > .el-select {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .study-row {
