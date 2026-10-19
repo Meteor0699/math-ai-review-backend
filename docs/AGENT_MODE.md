@@ -82,7 +82,7 @@ CREATE TABLE ai_message (
 
 ## 4. 工具（模型可调用）
 
-所有工具在 AI 工作线程内同步执行（MySQL 同步客户端），必须只读、限流、结果截断。
+所有工具在该轮对话的 **orchestrator 线程**内同步执行（MySQL 同步客户端），不占用 `AiExecutor` 的模型并发位；必须只读、限流、结果截断。
 
 | 名称 | 参数 | 返回（截断后） |
 |---|---|---|
@@ -106,6 +106,7 @@ CREATE TABLE ai_message (
 
 ## 6. 架构约束（重要）
 
-- AI 调用必须留在 `AiExecutor` 工作线程，**不得阻塞 Drogon IO 线程**。
-- 向 `ResponseStreamPtr` 写数据只能在事件循环线程做：工作线程用 `drogon::app().getLoop()->queueInLoop(...)` 投递。
+- 模型调用必须提交到 `AiExecutor`，**不得阻塞 Drogon IO 线程**；但 `AiExecutor` worker 只允许记录本轮结果并唤醒，**不得在 worker 上执行工具或等待下一轮**——否则 N 路并发工具轮会占满全部 worker 并自锁（每轮都在等排在等待者后面的请求）。
+- 每轮的工具执行与续跑放在该轮独占的 **orchestrator 线程**（`generateTurn` 起的 detached thread）上，由它循环驱动，最多 5 轮；轮次预算用尽仍有工具待执行时直接收尾。
+- 向 `ResponseStreamPtr` 写数据只能在事件循环线程做：任意工作线程用 `drogon::app().getLoop()->queueInLoop(...)` 投递。
 - SSE 连接是长连接：为每帧设置合理刷新，避免占用线程；`number_of_threads` 目前为 4，长连接数量需有上限（同一用户同一题同时只允许 1 条流）。
