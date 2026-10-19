@@ -32,6 +32,12 @@ export default defineConfig({
     {
       name: 'mobile-chromium',
       use: { ...devices['Pixel 7'], channel: 'msedge' }
+    },
+    {
+      // GitHub Actions runners do not ship Edge; the a11y gate runs on the
+      // bundled Playwright Chromium instead.
+      name: 'a11y-chromium',
+      use: { ...devices['Desktop Chrome'] }
     }
   ]
 })

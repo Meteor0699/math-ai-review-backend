@@ -42,7 +42,7 @@
     </div>
 
     <div v-else class="question-list">
-      <article
+      <div
         v-for="(question, index) in questions"
         :key="question.id"
         class="question-card"
@@ -67,7 +67,7 @@
           </div>
         </div>
         <el-button type="primary" plain>查看题目</el-button>
-      </article>
+      </div>
       <el-empty v-if="!questions.length" description="没有找到符合条件的题目，请调整筛选条件" />
     </div>
 

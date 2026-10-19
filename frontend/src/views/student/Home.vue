@@ -37,7 +37,7 @@
           <el-button text type="primary" @click="router.push('/courses')">查看全部</el-button>
         </div>
         <div v-loading="courseLoading" class="course-list">
-          <article
+          <div
             v-for="course in courses.slice(0, 3)"
             :key="course.id"
             class="course-row"
@@ -64,7 +64,7 @@
               <span>学习记录 {{ recordCountForCourse(course.id) }} 条</span>
             </div>
             <el-button type="primary" plain>进入学习</el-button>
-          </article>
+          </div>
           <el-empty v-if="!courseLoading && !courses.length" description="暂无已开放课程" />
         </div>
       </section>
