@@ -1,5 +1,6 @@
 #include <mysql.h>
 #include <cstdio>
+#include <cstdlib>
 
 int main() {
     MYSQL *conn = mysql_init(NULL);
@@ -13,7 +14,8 @@ int main() {
     
     // Test non-blocking connect
     MYSQL *ret = NULL;
-    int status = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", "123456", "math_ai_review", 3306, NULL, 0);
+    const char *password = std::getenv("DB_PASSWORD");
+    int status = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", password ? password : "", "math_ai_review", 3306, NULL, 0);
     printf("mysql_real_connect_start returned: status=%d, ret=%p\n", status, (void*)ret);
     
     if (status == 0) {

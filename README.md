@@ -19,7 +19,7 @@
 | 章节浏览 | 按课程查看章节结构，逐层深入 |
 | 重点知识 | 每章展示重点知识，包括核心内容、常用公式、高频题型、易错点、复习建议 |
 | 题库练习 | 按课程、章节、题型、难度筛选题目 |
-| 题目详情 | 查看题干、标准答案、普通解析 |
+| 题目详情 | 先查看题干，点击后再按需加载标准答案与普通解析 |
 | AI 讲解 | 调用大模型 API 生成详细解题讲解，首次生成后缓存 |
 | 往年试题 | 浏览和下载往年考试试卷 |
 
@@ -32,7 +32,7 @@
 | 重点知识管理 | 知识点的新增、编辑、删除，含考核频率标注 |
 | 题库管理 | 支持选择题、填空题、计算题、证明题、判断题的录入和维护 |
 | 试卷管理 | 试卷信息管理及文件上传 |
-| 用户管理 | 用户列表查看（预留） |
+| 用户管理 | 用户新增、编辑、禁用和密码重置 |
 
 ## 技术栈
 
@@ -45,6 +45,13 @@
 | 密码 | SHA256 + Salt 哈希 |
 | AI | 阿里云百炼（兼容 OpenAI Chat Completions 协议） |
 | 文件存储 | 服务器本地目录，数据库保存相对路径 |
+
+## 界面与质量基线
+
+- 学生端和管理员端共用蓝白教育产品设计系统，支持桌面侧栏、顶部工具栏和手机底部导航。
+- 设计令牌位于 `frontend/src/styles/design-system.css`，详细规范见 `docs/UI_DESIGN_SYSTEM.md`。
+- 数据库题干、答案、解析与 AI 内容统一经 `FormulaContent` 安全转义后渲染，KaTeX 使用 `trust: false`。
+- 前端提供 ESLint、Node 单测和 Playwright 冒烟测试；改造报告与截图见 `docs/UI_REDESIGN_REPORT.md`。
 
 ## 项目目录结构
 
@@ -310,13 +317,9 @@ AI_MODEL=qwen-plus
 
 > **注意**：`.env` 文件已在 `.gitignore` 中排除，请勿将真实 API Key 提交到仓库。
 
-## 测试账号
+## 本地测试账号
 
-| 用户名 | 密码 | 角色 | 说明 |
-|--------|------|------|------|
-| `admin` | `123456` | 管理员 | 可访问管理后台 `/admin` |
-| `student` | `123456` | 学生 | 可访问学生端全部功能 |
-| `student2` | `123456` | 学生 | 可访问学生端全部功能 |
+请在本地数据库中创建独立的管理员和学生账号，并使用强密码。仓库和登录页不会公开固定测试密码；端到端测试可通过 `E2E_STUDENT_USERNAME`、`E2E_STUDENT_PASSWORD`、`E2E_ADMIN_USERNAME` 和 `E2E_ADMIN_PASSWORD` 环境变量读取本机凭据。
 
 ## API 接口说明
 
@@ -378,6 +381,7 @@ AI_MODEL=qwen-plus
 | POST | `/api/admin/papers/upload` | 上传试卷文件 |
 | PUT | `/api/admin/papers/{id}` | 编辑试卷信息 |
 | DELETE | `/api/admin/papers/{id}` | 删除试卷（逻辑删除） |
+| GET | `/api/admin/stats` | 获取管理后台真实内容统计 |
 
 ### 题库筛选参数
 
@@ -400,7 +404,7 @@ AI_MODEL=qwen-plus
 ```bash
 curl -X POST "http://localhost:8080/api/auth/login" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"admin\",\"password\":\"123456\"}"
+  -d "{\"username\":\"<your-username>\",\"password\":\"<your-password>\"}"
 ```
 
 返回：

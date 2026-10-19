@@ -34,7 +34,7 @@ onMounted(async () => {
   try {
     const res = await getKnowledgePoints(chapterId, { page: 1, pageSize: 100 })
     list.value = res.data?.items || []
-  } catch (error) {
+  } catch {
     // 错误已在 request 拦截器中处理
   } finally {
     loading.value = false

@@ -1,6 +1,6 @@
 <template>
-  <div class="course-detail">
-    <el-breadcrumb separator="/" style="margin-bottom: 16px">
+  <div class="app-page course-detail">
+    <el-breadcrumb separator="/" class="app-breadcrumb">
       <el-breadcrumb-item :to="{ path: '/courses' }">课程列表</el-breadcrumb-item>
       <el-breadcrumb-item>{{ course?.courseName || '课程详情' }}</el-breadcrumb-item>
     </el-breadcrumb>
@@ -13,7 +13,7 @@
             :src="getPrimaryCourseCover(course)"
             :alt="`${course.courseName} 课程封面`"
           />
-          <div v-else class="info-icon" :style="{ background: courseColors[(course.id % 3)] }">
+          <div v-else class="info-icon">
             <el-icon :size="28"><Notebook /></el-icon>
           </div>
         </div>
@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <div class="section-header" style="margin-top: 28px">
+    <div class="section-header chapter-section-header">
       <h3>
         <el-icon><Folder /></el-icon>
         章节列表
@@ -62,7 +62,6 @@
         :key="chapter.id"
         class="chapter-card"
         shadow="hover"
-        :body-style="{ padding: '20px 24px' }"
       >
         <div class="chapter-main" @click="$router.push(`/chapters/${chapter.id}`)">
           <div class="chapter-index">{{ index + 1 }}</div>
@@ -98,12 +97,6 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const courseId = route.params.courseId
 
-const courseColors = [
-  'linear-gradient(135deg, #2f80ed 0%, #56ccf2 100%)',
-  'linear-gradient(135deg, #27ae60 0%, #6fcf97 100%)',
-  'linear-gradient(135deg, #9b51e0 0%, #bb6bd9 100%)'
-]
-
 const course = ref(null)
 const chapters = ref([])
 const courseLoading = ref(false)
@@ -135,28 +128,31 @@ onMounted(async () => {
 
 <style scoped>
 .course-detail {
-  max-width: 980px;
-  margin: 0 auto;
+  width: min(100%, 1080px);
+}
+
+.app-breadcrumb {
+  margin-bottom: var(--space-4);
 }
 
 .course-hero {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: 24px;
+  grid-template-columns: 152px 1fr;
+  gap: var(--space-6);
   align-items: stretch;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
   overflow: hidden;
 }
 
 .hero-cover {
-  min-height: 240px;
-  background: #f5f7fa;
+  min-height: 202px;
+  background: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid #ebeef5;
+  border-right: 1px solid var(--color-border);
 }
 
 .hero-cover img {
@@ -166,116 +162,125 @@ onMounted(async () => {
 }
 
 .hero-main {
-  padding: 28px 28px 24px 0;
+  align-self: center;
+  padding: var(--space-6) var(--space-6) var(--space-6) 0;
 }
 
 .hero-title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .hero-title-row h2 {
-  font-size: 24px;
+  font-size: var(--text-2xl);
   font-weight: 700;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 
 .info-icon {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-  color: #fff;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-lg);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
   flex-shrink: 0;
 }
 
 .info-desc {
-  font-size: 14px;
-  color: #606266;
+  color: var(--color-text-secondary);
   line-height: 1.8;
 }
 
 .textbook-section {
-  margin-top: 28px;
+  margin-top: var(--space-6);
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .section-header h3 {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 18px;
-  color: #303133;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  color: var(--color-text-primary);
 }
 
 .section-count {
-  font-size: 13px;
-  color: #909399;
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
 }
 
 .textbook-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-4);
 }
 
 .textbook-card {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  min-height: 122px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   overflow: hidden;
 }
 
 .textbook-cover {
   display: block;
   width: 100%;
-  aspect-ratio: 0.72;
+  height: 100%;
   object-fit: cover;
-  background: #f5f7fa;
+  background: var(--color-surface-muted);
 }
 
 .textbook-info {
-  padding: 12px 14px 14px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .textbook-info strong {
-  font-size: 15px;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 
 .textbook-info span,
 .textbook-info small {
-  color: #909399;
-  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.chapter-section-header {
+  margin-top: var(--space-7);
 }
 
 .chapter-card {
-  margin-bottom: 12px;
-  border-radius: 8px;
-  transition: transform 0.2s;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
 }
 
 .chapter-card:hover {
-  transform: translateX(4px);
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .chapter-main {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
   cursor: pointer;
 }
 
@@ -285,10 +290,9 @@ onMounted(async () => {
   align-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: #ecf5ff;
-  color: #409EFF;
-  font-size: 15px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -298,28 +302,28 @@ onMounted(async () => {
 }
 
 .chapter-title {
-  font-size: 16px;
+  font-size: var(--text-md);
   font-weight: 600;
-  color: #303133;
+  color: var(--color-text-primary);
 }
 
 .chapter-desc {
-  font-size: 13px;
-  color: #909399;
-  margin-top: 4px;
+  margin-top: var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
 }
 
 .chapter-arrow {
-  color: #c0c4cc;
+  color: var(--color-text-tertiary);
   font-size: 16px;
 }
 
 .chapter-actions {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #e4e7ed;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-light);
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 @media (max-width: 720px) {
@@ -328,13 +332,25 @@ onMounted(async () => {
   }
 
   .hero-cover {
-    height: 260px;
+    height: 220px;
     border-right: 0;
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .hero-main {
-    padding: 22px;
+    padding: var(--space-5);
+  }
+
+  .textbook-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chapter-actions {
+    flex-wrap: wrap;
+  }
+
+  .chapter-actions .el-button {
+    min-height: 44px;
   }
 }
 </style>

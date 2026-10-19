@@ -1,5 +1,5 @@
 <template>
-  <div class="paper-manage">
+  <div class="app-page management-page paper-manage">
     <div class="page-header">
       <h2>试卷管理</h2>
       <el-button type="primary" @click="openUploadDialog">
@@ -8,7 +8,7 @@
       </el-button>
     </div>
 
-    <el-form inline style="margin-bottom: 16px">
+    <el-form inline class="filter-bar">
       <el-form-item label="课程">
         <el-select v-model="filterCourseId" placeholder="全部" clearable @change="fetchList">
           <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
@@ -272,8 +272,9 @@ function handleDownload(row) {
 </script>
 
 <style scoped>
-.paper-manage { max-width: 1200px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { font-size: 20px; color: #303133; }
-.upload-tip { font-size: 12px; color: #909399; margin-top: 4px; }
+.upload-tip {
+  margin-top: var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
 </style>

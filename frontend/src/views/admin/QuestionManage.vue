@@ -1,5 +1,5 @@
 <template>
-  <div class="question-manage">
+  <div class="app-page management-page question-manage">
     <div class="page-header">
       <h2>题库管理</h2>
       <el-button type="primary" @click="openDialog(null)">
@@ -9,7 +9,7 @@
     </div>
 
     <!-- 筛选 -->
-    <el-form inline style="margin-bottom: 16px">
+    <el-form inline class="filter-bar">
       <el-form-item label="课程">
         <el-select v-model="filterCourseId" placeholder="全部" clearable @change="onCourseFilter">
           <el-option v-for="c in courseList" :key="c.id" :label="c.courseName" :value="c.id" />
@@ -327,9 +327,3 @@ function diffTagType(diff) {
   return map[diff] || 'info'
 }
 </script>
-
-<style scoped>
-.question-manage { max-width: 1400px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { font-size: 20px; color: #303133; }
-</style>

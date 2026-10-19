@@ -23,6 +23,13 @@ export function getChapters(courseId, params) {
   })
 }
 
+export function getChapterDetail(chapterId) {
+  return request({
+    url: `/chapters/${chapterId}`,
+    method: 'get'
+  })
+}
+
 export function getKnowledgePoints(chapterId, params) {
   return request({
     url: `/chapters/${chapterId}/knowledge-points`,

@@ -1,5 +1,5 @@
 <template>
-  <div class="user-manage">
+  <div class="app-page management-page user-manage">
     <div class="page-header">
       <h2>用户管理</h2>
       <el-button type="primary" @click="openDialog(null)">
@@ -289,28 +289,8 @@ async function handleDisable(row) {
 </script>
 
 <style scoped>
-.user-manage {
-  max-width: 1280px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  font-size: 20px;
-  color: #303133;
-}
-
-.filter-bar {
-  margin-bottom: 16px;
-}
-
 .pagination {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   justify-content: flex-end;
 }
 </style>

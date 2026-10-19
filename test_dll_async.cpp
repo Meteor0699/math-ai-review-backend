@@ -1,6 +1,7 @@
 // Test the MariaDB DLL's native async functions (without our wrapper)
 #include <mysql.h>
 #include <cstdio>
+#include <cstdlib>
 
 int main() {
     fprintf(stderr, "Testing DLL native async...\n");
@@ -15,7 +16,8 @@ int main() {
     mysql_options(conn, MYSQL_OPT_NONBLOCK, &nb);
     
     MYSQL *ret = NULL;
-    int status = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", "123456", "math_ai_review", 3306, NULL, 0);
+    const char *password = std::getenv("DB_PASSWORD");
+    int status = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", password ? password : "", "math_ai_review", 3306, NULL, 0);
     fprintf(stderr, "mysql_real_connect_start status=%d, ret=%p\n", status, (void*)ret);
     
     if (status == 0) {

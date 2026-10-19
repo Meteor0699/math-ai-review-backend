@@ -88,7 +88,7 @@ struct DbConfig
     unsigned int port{3306};
     std::string dbname{"math_ai_review"};
     std::string user{"root"};
-    std::string password{"123456"};
+    std::string password;
 };
 
 void applyUrlConfig(DbConfig &config, const std::string &url);

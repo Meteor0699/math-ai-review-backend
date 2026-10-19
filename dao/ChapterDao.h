@@ -18,6 +18,7 @@ class ChapterDao
     using ErrorCallback = std::function<void(const std::string &)>;
 
     void listActiveByCourse(long long courseId, int page, int pageSize, JsonCallback onSuccess, ErrorCallback onError) const;
+    void findActiveById(long long id, JsonCallback onSuccess, ErrorCallback onError) const;
     void listAll(const drogon::HttpRequestPtr &request, int page, int pageSize, JsonCallback onSuccess, ErrorCallback onError) const;
     void create(const Json::Value &chapter, JsonCallback onSuccess, ErrorCallback onError) const;
     void update(long long id, const Json::Value &chapter, CountCallback onSuccess, ErrorCallback onError) const;

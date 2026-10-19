@@ -21,7 +21,8 @@ int main() {
     }
     
     MYSQL *ret = NULL;
-    int result = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", "123456", "math_ai_review", 3306, NULL, 0);
+    const char *password = std::getenv("DB_PASSWORD");
+    int result = mysql_real_connect_start(&ret, conn, "127.0.0.1", "root", password ? password : "", "math_ai_review", 3306, NULL, 0);
     fprintf(stderr, "mysql_real_connect_start result=%d, ret=%p\n", result, (void*)ret);
     
     if (ret) {

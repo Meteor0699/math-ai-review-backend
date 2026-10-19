@@ -1,5 +1,9 @@
 import request from './request'
 
+export function adminGetStats() {
+  return request({ url: '/admin/stats', method: 'get' })
+}
+
 // ========== 课程管理 ==========
 export function adminGetCourseList(params) {
   return request({ url: '/admin/courses', method: 'get', params })

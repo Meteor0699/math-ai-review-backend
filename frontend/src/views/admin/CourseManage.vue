@@ -1,5 +1,5 @@
 <template>
-  <div class="course-manage">
+  <div class="app-page management-page course-manage">
     <div class="page-header">
       <h2>课程管理</h2>
       <el-button type="primary" @click="openDialog(null)">
@@ -154,34 +154,18 @@ async function handleDelete(row) {
 </script>
 
 <style scoped>
-.course-manage {
-  max-width: 1200px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  font-size: 20px;
-  color: #303133;
-}
-
 .cover-thumb {
   display: block;
   width: 46px;
   height: 64px;
   object-fit: cover;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  background: #f5f7fa;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
 }
 
 .cover-empty {
-  color: #c0c4cc;
-  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
 }
 </style>

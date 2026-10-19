@@ -1,5 +1,5 @@
 <template>
-  <div class="paper-list">
+  <div class="app-page paper-list">
     <div class="page-header">
       <div>
         <h2>试卷库</h2>
@@ -22,7 +22,6 @@
         :key="paper.id"
         class="paper-card"
         shadow="hover"
-        :body-style="{ padding: '18px 20px' }"
       >
         <div class="paper-main">
           <div class="paper-icon">
@@ -57,11 +56,11 @@
         show-icon
         :closable="false"
         title="学生上传的文件会先经过 AI 审核。只有被识别为数学试卷、数学测试卷或数学练习卷后，才会进入试卷库。"
-        style="margin-bottom: 16px"
+        class="upload-alert"
       />
       <el-form ref="uploadFormRef" :model="uploadForm" :rules="uploadRules" label-width="90px">
         <el-form-item label="课程" prop="courseId">
-          <el-select v-model="uploadForm.courseId" placeholder="请选择课程" style="width: 100%">
+          <el-select v-model="uploadForm.courseId" placeholder="请选择课程" class="form-control">
             <el-option v-for="course in courseList" :key="course.id" :label="course.courseName" :value="course.id" />
           </el-select>
         </el-form-item>
@@ -225,52 +224,51 @@ function openPaper(paper) {
 
 <style scoped>
 .paper-list {
-  max-width: 960px;
-  margin: 0 auto;
+  width: min(100%, 1040px);
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .page-header h2 {
-  font-size: 22px;
-  color: #1f2937;
+  color: var(--color-text-primary);
+  font-size: var(--text-2xl);
 }
 
 .page-header p {
-  color: #909399;
-  font-size: 14px;
-  margin-top: 6px;
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .paper-tabs {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .paper-stack {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .paper-card {
-  transition: transform 0.2s, border-color 0.2s;
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
 }
 
 .paper-card:hover {
-  transform: translateX(4px);
-  border-color: #cfe0ff;
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .paper-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .paper-icon {
@@ -279,9 +277,9 @@ function openPaper(paper) {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: #fff5dd;
-  color: #c97706;
+  border-radius: var(--radius-md);
+  background: var(--color-warning-light);
+  color: var(--color-warning-dark);
   flex-shrink: 0;
 }
 
@@ -291,22 +289,30 @@ function openPaper(paper) {
 }
 
 .paper-title {
-  font-size: 16px;
+  font-size: var(--text-md);
   font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 8px;
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-2);
 }
 
 .paper-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
 }
 
 .upload-box {
+  width: 100%;
+}
+
+.upload-alert {
+  margin-bottom: var(--space-4);
+}
+
+.form-control {
   width: 100%;
 }
 
@@ -318,6 +324,20 @@ function openPaper(paper) {
 
   .page-header {
     flex-direction: column;
+  }
+
+  .page-header .el-button,
+  .paper-main > .el-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .paper-main {
+    flex-wrap: wrap;
+  }
+
+  .paper-info {
+    flex-basis: calc(100% - 58px);
   }
 }
 </style>

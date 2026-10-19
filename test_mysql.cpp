@@ -1,5 +1,6 @@
 #include <mysql.h>
 #include <cstdio>
+#include <cstdlib>
 
 int main() {
     MYSQL *conn = mysql_init(NULL);
@@ -11,7 +12,8 @@ int main() {
     unsigned long timeout = 10;
     mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
     
-    if (mysql_real_connect(conn, "127.0.0.1", "root", "123456", "math_ai_review", 3306, NULL, 0)) {
+    const char *password = std::getenv("DB_PASSWORD");
+    if (mysql_real_connect(conn, "127.0.0.1", "root", password ? password : "", "math_ai_review", 3306, NULL, 0)) {
         printf("Connected successfully with mysql_real_connect!\n");
         mysql_close(conn);
         return 0;

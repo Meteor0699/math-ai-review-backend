@@ -5,6 +5,7 @@
 #include <string>
 
 #include "controllers/AiController.h"
+#include "controllers/AdminStatsController.h"
 #include "controllers/AuthController.h"
 #include "controllers/ChapterController.h"
 #include "controllers/CourseController.h"
@@ -27,6 +28,7 @@ static void forceKeepControllers()
 {
     volatile const bool *refs[] = {
         &AuthController::isAutoCreation,
+        &AdminStatsController::isAutoCreation,
         &CourseController::isAutoCreation,
         &ChapterController::isAutoCreation,
         &KnowledgeController::isAutoCreation,
@@ -169,7 +171,7 @@ static void registerFrontendRoot()
         {drogon::Get});
 
     drogon::app().registerHandlerViaRegex(
-        "^/(login|home|courses.*|chapters.*|questions.*|study.*|papers.*|admin.*|assets/.*|textbook-covers/.*)$",
+        "^/(login|home|courses.*|chapters.*|knowledge.*|questions.*|study.*|papers.*|admin.*|assets/.*|textbook-covers/.*)$",
         [](const drogon::HttpRequestPtr &request,
            std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
             callback(frontendFileResponse(request));

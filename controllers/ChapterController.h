@@ -10,6 +10,7 @@ class ChapterController : public drogon::HttpController<ChapterController>
     METHOD_LIST_BEGIN
     ADD_METHOD_TO(ChapterController::listByCourse, "/api/courses/{1}/chapters", drogon::Get);
     ADD_METHOD_TO(ChapterController::listByCourse, "/api/v1/courses/{1}/chapters", drogon::Get);
+    ADD_METHOD_TO(ChapterController::detail, "/api/chapters/{1}", drogon::Get);
     ADD_METHOD_TO(ChapterController::detail, "/api/v1/chapters/{1}", drogon::Get);
     ADD_METHOD_TO(ChapterController::listAll, "/api/admin/chapters", drogon::Get, "AdminAuthFilter");
     ADD_METHOD_TO(ChapterController::create, "/api/admin/chapters", drogon::Post, "AdminAuthFilter");
