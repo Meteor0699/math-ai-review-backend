@@ -22,7 +22,12 @@ async function scan(page, label) {
     help: v.help,
     nodes: v.nodes.slice(0, 4).map((n) => ({
       target: n.target.join(' '),
-      html: (n.html || '').slice(0, 140)
+      html: (n.html || '').slice(0, 140),
+      // axe reports the measured colours for contrast checks; print them so the
+      // fix is a known token change rather than a guess.
+      contrast: n.any?.[0]?.data
+        ? `${n.any[0].data.fgColor} on ${n.any[0].data.bgColor} = ${n.any[0].data.contrastRatio}`
+        : undefined
     }))
   }))
   expect(summary, `${label} axe violations: ${JSON.stringify(summary, null, 2)}`).toEqual([])

@@ -20,7 +20,7 @@
   --color-success-text: #15803d;
   --color-warning-text: #b45309;
   --color-text-primary: #1f2937;
-  --color-text-secondary: #64748b;
+  --color-text-secondary: #5b6b80;
   /* Decorative-only: 2.56:1 on white, so never use these for text. Text usages
      were replaced with --color-text-secondary in Login.vue, StudentLayout.vue,
      AdminLayout.vue, student/CourseDetail.vue, student/PaperList.vue,
@@ -406,3 +406,42 @@ a:focus-visible {
   background-color: #f1f5f9;
   border-color: #e2e8f0;
 }
+
+/* axe color-contrast: Element Plus placeholder grey (#a8abb2) is 2.29:1 on
+   white and 2.14:1 on the muted select background. Use the accessible
+   secondary token for placeholder text as well. */
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder,
+.el-select__placeholder,
+.el-select__placeholder.is-transparent,
+.is-disabled .el-select__placeholder {
+  color: #5b6b80;
+}
+
+/* Element Plus applies its placeholder colour through these variables with a
+   more specific selector than a single class, so override the variables (and
+   keep an !important fallback for the select placeholder text node). */
+:root {
+  --el-text-color-placeholder: #5b6b80;
+  --el-text-color-disabled: #5b6b80;
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: #5b6b80 !important;
+}
+
+.el-select__placeholder,
+.el-select__placeholder.is-transparent,
+.el-select__placeholder.is-transparent > span,
+.is-disabled .el-select__placeholder,
+.is-disabled .el-select__placeholder > span {
+  color: #5b6b80 !important;
+}
+
+/* Element Plus tag text uses the bright semantic palette (#22c55e 2.27:1,
+   #f59e0b 2.14:1, #ef4444 3.76:1 on white). Tags are text, so use the
+   text-safe pair for the label and keep the bright hue for the fill. */
+.el-tag.el-tag--success { color: #15803d; background-color: #ecfdf3; border-color: #bbf7d0; }
+.el-tag.el-tag--warning { color: #b45309; background-color: #fffbeb; border-color: #fde68a; }
+.el-tag.el-tag--danger { color: #b91c1c; background-color: #fef2f2; border-color: #fecaca; }
