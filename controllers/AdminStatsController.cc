@@ -13,10 +13,10 @@ void AdminStatsController::summary(
     {
         const auto result = mathai::utils::mysql::execute(
             "SELECT "
-            "(SELECT COUNT(*) FROM user) AS user_count, "
+            "(SELECT COUNT(*) FROM user WHERE status = 1) AS user_count, "
             "(SELECT COUNT(*) FROM course WHERE status = 1) AS course_count, "
             "(SELECT COUNT(*) FROM chapter WHERE status = 1) AS chapter_count, "
-            "(SELECT COUNT(*) FROM knowledge_point) AS knowledge_count, "
+            "(SELECT COUNT(*) FROM knowledge_point WHERE status = 1) AS knowledge_count, "
             "(SELECT COUNT(*) FROM question WHERE status = 1) AS question_count, "
             "(SELECT COUNT(*) FROM exam_paper WHERE status = 1) AS paper_count, "
             "(SELECT COUNT(*) FROM ai_explanation WHERE status = 'success') AS ai_explanation_count");

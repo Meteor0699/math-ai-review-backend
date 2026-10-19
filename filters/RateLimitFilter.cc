@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -78,6 +79,70 @@ Limit limitForPath(const std::string &path)
     return {10, std::chrono::minutes(1), "ai"};
 }
 
+std::string trimSpaces(const std::string &value)
+{
+    const auto first = value.find_first_not_of(" \t");
+    if (first == std::string::npos)
+    {
+        return "";
+    }
+    const auto last = value.find_last_not_of(" \t");
+    return value.substr(first, last - first + 1);
+}
+
+bool trustsProxyHeaders()
+{
+    static const bool enabled = [] {
+        const auto *value = std::getenv("TRUST_PROXY_HEADERS");
+        if (value == nullptr)
+        {
+            return false;
+        }
+        const std::string text(value);
+        return text == "1" || text == "true" || text == "TRUE" || text == "yes" || text == "YES";
+    }();
+    return enabled;
+}
+
+std::string forwardedClientAddress(const drogon::HttpRequestPtr &request)
+{
+    const auto forwardedFor = request->getHeader("X-Forwarded-For");
+    if (!forwardedFor.empty())
+    {
+        // Exactly one trusted proxy is assumed, so the rightmost entry is the
+        // address that proxy observed. Entries further left may have been
+        // supplied by the client.
+        const auto comma = forwardedFor.rfind(',');
+        const auto candidate = trimSpaces(
+            comma == std::string::npos ? forwardedFor : forwardedFor.substr(comma + 1));
+        if (!candidate.empty())
+        {
+            return candidate;
+        }
+    }
+
+    const auto realIp = trimSpaces(request->getHeader("X-Real-IP"));
+    return realIp;
+}
+
+std::string clientAddress(const drogon::HttpRequestPtr &request)
+{
+    // Behind a reverse proxy (Render, nginx, Cloudflare) peerAddr() is the
+    // proxy itself, so without forwarded headers every visitor shares a single
+    // rate limit bucket and one noisy client locks out everybody. The headers
+    // are only trusted when the deployment states that the backend is not
+    // directly reachable, because they are client controlled otherwise.
+    if (trustsProxyHeaders())
+    {
+        const auto forwarded = forwardedClientAddress(request);
+        if (!forwarded.empty())
+        {
+            return forwarded;
+        }
+    }
+    return request->peerAddr().toIp();
+}
+
 std::string requestIdentity(const drogon::HttpRequestPtr &request)
 {
     const auto auth = mathai::utils::authenticateRequest(request);
@@ -85,7 +150,7 @@ std::string requestIdentity(const drogon::HttpRequestPtr &request)
     {
         return "user:" + std::to_string(auth.claims->userId);
     }
-    return "ip:" + request->peerAddr().toIp();
+    return "ip:" + clientAddress(request);
 }
 
 } // namespace

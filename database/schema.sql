@@ -2,6 +2,9 @@
 -- MySQL 8.0 schema for 高校数学课程 AI 辅助复习 Web 平台
 
 -- DEVELOPMENT INITIALIZATION ONLY: this file drops existing tables.
+-- Fresh installs must stay in sync with database/migrations/*.sql: the two
+-- agent-mode tables created by V004__add_agent_conversations.sql are declared
+-- below as well.
 -- Never run it against a production or shared database.
 CREATE DATABASE IF NOT EXISTS math_ai_review
   DEFAULT CHARACTER SET utf8mb4
@@ -12,6 +15,8 @@ USE math_ai_review;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS ai_message;
+DROP TABLE IF EXISTS ai_conversation;
 DROP TABLE IF EXISTS ai_explanation;
 DROP TABLE IF EXISTS wrong_question;
 DROP TABLE IF EXISTS question_attempt;
@@ -71,6 +76,7 @@ CREATE TABLE chapter (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
   KEY idx_chapter_course_sort (course_id, sort_order),
+  KEY idx_chapter_status_sort (status, sort_order, id),
   KEY idx_chapter_parent (parent_id),
   CONSTRAINT fk_chapter_course
     FOREIGN KEY (course_id) REFERENCES course (id)
@@ -98,6 +104,8 @@ CREATE TABLE knowledge_point (
   PRIMARY KEY (id),
   KEY idx_knowledge_course (course_id),
   KEY idx_knowledge_chapter_sort (chapter_id, sort_order),
+  KEY idx_knowledge_status_sort (status, sort_order, id),
+  KEY idx_knowledge_course_status_sort (course_id, status, sort_order, id),
   CONSTRAINT fk_knowledge_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -129,6 +137,8 @@ CREATE TABLE exam_paper (
   KEY idx_exam_paper_course_year (course_id, exam_year),
   KEY idx_exam_paper_owner_visibility (owner_user_id, visibility),
   KEY idx_exam_paper_status (status),
+  KEY idx_exam_paper_status_visibility_year (status, visibility, exam_year, id),
+  KEY idx_exam_paper_owner_status_year (owner_user_id, status, exam_year, id),
   CONSTRAINT fk_exam_paper_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -165,6 +175,9 @@ CREATE TABLE question (
   KEY idx_question_type_difficulty (question_type, difficulty),
   KEY idx_question_source_year (source_year),
   KEY idx_question_from_exam_paper (from_exam_paper),
+  KEY idx_question_status_sort (status, sort_order, id),
+  KEY idx_question_course_status_sort (course_id, status, sort_order, id),
+  KEY idx_question_chapter_status_sort (chapter_id, status, sort_order, id),
   CONSTRAINT fk_question_course
     FOREIGN KEY (course_id) REFERENCES course (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -210,6 +223,7 @@ CREATE TABLE question_attempt (
   PRIMARY KEY (id),
   UNIQUE KEY uk_question_attempt_user_question (user_id, question_id),
   KEY idx_question_attempt_user_time (user_id, last_attempt_at),
+  KEY idx_question_attempt_user_time_id (user_id, last_attempt_at, id),
   KEY idx_question_attempt_question (question_id),
   CONSTRAINT fk_question_attempt_user
     FOREIGN KEY (user_id) REFERENCES user (id)
@@ -232,6 +246,7 @@ CREATE TABLE wrong_question (
   PRIMARY KEY (id),
   UNIQUE KEY uk_wrong_question_user_question (user_id, question_id),
   KEY idx_wrong_question_user_status_time (user_id, status, added_at),
+  KEY idx_wrong_question_user_status_added_id (user_id, status, added_at, id),
   KEY idx_wrong_question_question (question_id),
   CONSTRAINT fk_wrong_question_user
     FOREIGN KEY (user_id) REFERENCES user (id)
@@ -260,6 +275,42 @@ CREATE TABLE ai_explanation (
     FOREIGN KEY (question_id) REFERENCES question (id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI解析记录表';
+
+-- Agent 模式：题目页常驻 AI 面板的会话（docs/AGENT_MODE.md）
+-- 与 database/migrations/V004__add_agent_conversations.sql 保持一致。
+CREATE TABLE ai_conversation (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  user_id BIGINT NOT NULL COMMENT '用户ID',
+  question_id BIGINT NOT NULL COMMENT '题目ID',
+  message_count INT NOT NULL DEFAULT 0 COMMENT '消息条数',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_ai_conversation_user_question (user_id, question_id),
+  KEY idx_ai_conversation_user_updated (user_id, updated_at),
+  CONSTRAINT fk_ai_conversation_user
+    FOREIGN KEY (user_id) REFERENCES user (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ai_conversation_question
+    FOREIGN KEY (question_id) REFERENCES question (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent会话表';
+
+CREATE TABLE ai_message (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  conversation_id BIGINT NOT NULL COMMENT '所属会话ID',
+  role ENUM('user', 'assistant', 'tool') NOT NULL COMMENT '角色：user学生，assistant模型，tool工具结果',
+  content MEDIUMTEXT DEFAULT NULL COMMENT '消息正文',
+  tool_name VARCHAR(64) DEFAULT NULL COMMENT '工具名称',
+  tool_args TEXT DEFAULT NULL COMMENT '工具入参JSON',
+  tool_result MEDIUMTEXT DEFAULT NULL COMMENT '工具返回JSON',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  KEY idx_ai_message_conversation (conversation_id, id),
+  CONSTRAINT fk_ai_message_conversation
+    FOREIGN KEY (conversation_id) REFERENCES ai_conversation (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent消息表';
 
 INSERT INTO user (id, username, password_hash, real_name, student_no, role, status) VALUES
 (1, 'admin', 'sha256$math-ai-review$b9ef3da9ebe71810e3c5d67b311bf23ce15f70646de275e131db945ed7ff0555', '管理员', NULL, 'admin', 1);

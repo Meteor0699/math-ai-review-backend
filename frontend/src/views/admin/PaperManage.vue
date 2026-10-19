@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page paper-manage">
     <div class="page-header">
-      <h2>试卷管理</h2>
+      <h1>试卷管理</h1>
       <el-button type="primary" @click="openUploadDialog">
         <el-icon><Upload /></el-icon>
         上传试卷
@@ -20,12 +20,13 @@
     </el-form>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="title" label="试卷名称" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="courseName" label="课程" width="120" />
-      <el-table-column prop="examYear" label="年份" width="80" />
-      <el-table-column prop="filePath" label="文件名" min-width="200" show-overflow-tooltip />
-      <el-table-column label="操作" width="220" fixed="right">
+      <!-- 紧凑视口保留「试卷名称 + 操作」；极窄屏同时收窄操作列宽度 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="60" />
+      <el-table-column prop="title" label="试卷名称" :min-width="isNarrow ? 160 : 200" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" prop="courseName" label="课程" width="120" />
+      <el-table-column v-if="!isCompact" prop="examYear" label="年份" width="80" />
+      <el-table-column v-if="!isCompact" prop="filePath" label="文件名" min-width="200" show-overflow-tooltip />
+      <el-table-column label="操作" :width="isNarrow ? 190 : 220" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openEditDialog(row)">编辑</el-button>
           <el-button size="small" text type="success" @click="handleDownload(row)">下载</el-button>
@@ -113,6 +114,11 @@ import {
   adminGetCourseList
 } from '../../api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口（≤1400px）收起低优先级列；极窄视口（≤900px）再收窄操作列
+const isCompact = useIsCompact()
+const isNarrow = useIsCompact('(max-width: 900px)')
 
 const tableData = ref([])
 const courseList = ref([])
@@ -274,7 +280,7 @@ function handleDownload(row) {
 <style scoped>
 .upload-tip {
   margin-top: var(--space-1);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 </style>

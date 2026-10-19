@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page chapter-manage">
     <div class="page-header">
-      <h2>章节管理</h2>
+      <h1>章节管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增章节
@@ -18,13 +18,14 @@
     </el-form>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="courseName" label="所属课程" width="140" />
-      <el-table-column prop="courseId" label="课程ID" width="80" />
+      <!-- 窄屏只保留「章节标题 + 操作」 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="60" />
+      <el-table-column v-if="!isCompact" prop="courseName" label="所属课程" width="140" />
+      <el-table-column v-if="!isCompact" prop="courseId" label="课程ID" width="80" />
       <el-table-column prop="title" label="章节标题" min-width="180" show-overflow-tooltip />
-      <el-table-column prop="description" label="章节描述" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="sortOrder" label="排序" width="80" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column v-if="!isCompact" prop="description" label="章节描述" min-width="200" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" prop="sortOrder" label="排序" width="80" />
+      <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button size="small" text type="danger" @click="handleDelete(row)">删除</el-button>
@@ -67,6 +68,10 @@ import { ref, onMounted, reactive } from 'vue'
 import { adminGetChapterList, adminCreateChapter, adminUpdateChapter, adminDeleteChapter } from '../../api/admin'
 import { adminGetCourseList } from '../../api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口下收起低优先级列，并取消操作列右侧固定
+const isCompact = useIsCompact()
 
 const tableData = ref([])
 const courseList = ref([])

@@ -1,5 +1,6 @@
 <template>
   <div class="app-shell" :class="{ 'is-collapsed': collapsed }">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <aside class="app-sidebar">
       <div class="sidebar-brand">
         <AppLogo :compact="collapsed" />
@@ -27,6 +28,7 @@
           :prefix-icon="Search"
           clearable
           placeholder="搜索题目、知识点或课程"
+          aria-label="搜索题目、知识点或课程"
           @keyup.enter="submitSearch"
         />
       </div>
@@ -59,13 +61,20 @@
       </div>
     </header>
 
-    <main class="app-content">
+    <main id="main-content" tabindex="-1" class="app-content">
       <router-view />
     </main>
 
     <MobileBottomNav :items="mobileNavigation" />
 
-    <el-drawer v-model="drawerOpen" direction="ltr" size="280px" :with-header="false" class="mobile-drawer">
+    <el-drawer
+      v-model="drawerOpen"
+      direction="ltr"
+      size="280px"
+      :with-header="false"
+      aria-label="导航菜单"
+      class="mobile-drawer"
+    >
       <div class="drawer-brand"><AppLogo /></div>
       <nav class="drawer-navigation">
         <router-link v-for="item in navigation" :key="item.path" :to="item.path" @click="drawerOpen = false">
@@ -179,7 +188,7 @@ function handleLogout() {
 
 .sidebar-label {
   padding: 22px 24px 8px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 
@@ -280,12 +289,24 @@ function handleLogout() {
   background: var(--color-surface-muted);
 }
 
+/* Element Plus defaults the fallback avatar to neutral grey; the rest of the
+   product uses the primary tint for icon tiles, so match it here. */
+.profile-button :deep(.el-avatar) {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  font-weight: 600;
+}
+
 .profile-copy {
   display: flex;
   min-width: 80px;
   max-width: 128px;
   flex-direction: column;
   align-items: flex-start;
+  gap: 2px;
+  /* Element Plus resets line-height to 1 on the tooltip trigger, which left the
+     name a 13px tall box for 15px of glyph and clipped it. Restore leading. */
+  line-height: 1.35;
 }
 
 .profile-copy strong {

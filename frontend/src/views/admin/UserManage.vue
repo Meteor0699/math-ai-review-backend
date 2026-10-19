@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page user-manage">
     <div class="page-header">
-      <h2>用户管理</h2>
+      <h1>用户管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增用户
@@ -13,6 +13,7 @@
         <el-input
           v-model="filters.keyword"
           placeholder="用户名 / 姓名 / 学号"
+          aria-label="关键词"
           clearable
           style="width: 220px"
           @keyup.enter="fetchList"
@@ -31,26 +32,27 @@
     </el-form>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="username" label="用户名" min-width="130" />
-      <el-table-column prop="realName" label="姓名" min-width="120" />
-      <el-table-column prop="studentNo" label="学号" min-width="130" />
-      <el-table-column label="角色" width="100">
+      <!-- 紧凑视口保留「用户名 + 姓名 + 状态 + 操作」；极窄屏再收起状态并收窄操作列 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="70" />
+      <el-table-column prop="username" label="用户名" :min-width="isNarrow ? 110 : 130" show-overflow-tooltip />
+      <el-table-column prop="realName" label="姓名" :min-width="isNarrow ? 90 : 120" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" prop="studentNo" label="学号" min-width="130" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" label="角色" width="100">
         <template #default="{ row }">
           <el-tag :type="row.role === 'admin' ? 'danger' : 'success'" size="small">
             {{ roleLabel(row.role) }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="90">
+      <el-table-column v-if="!isNarrow" label="状态" width="90">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
             {{ row.status === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createdAt" label="创建时间" min-width="160" show-overflow-tooltip />
-      <el-table-column label="操作" width="240" fixed="right">
+      <el-table-column v-if="!isCompact" prop="createdAt" label="创建时间" min-width="160" show-overflow-tooltip />
+      <el-table-column label="操作" :width="isNarrow ? 140 : 240" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button size="small" text type="warning" @click="openPasswordDialog(row)">重置密码</el-button>
@@ -129,6 +131,11 @@ import {
   adminResetUserPassword,
   adminUpdateUser
 } from '../../api/admin'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口（≤1400px）收起低优先级列；极窄视口（≤900px）只留用户名 + 姓名 + 操作
+const isCompact = useIsCompact()
+const isNarrow = useIsCompact('(max-width: 900px)')
 
 const tableData = ref([])
 const loading = ref(false)

@@ -13,6 +13,10 @@
             v-if="getPrimaryCourseCover(course)"
             :src="getPrimaryCourseCover(course)"
             :alt="`${course.courseName || course.name}教材封面`"
+            width="116"
+            height="224"
+            loading="lazy"
+            decoding="async"
             @error="hideBrokenImage"
           />
           <span class="cover-fallback"><el-icon><Collection /></el-icon></span>
@@ -81,7 +85,9 @@ function hideBrokenImage(event) {
 <style scoped>
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  /* 310px columns left only ~214px for the description, so its third line was
+     always cut. Wider columns let the text breathe and stop the truncation. */
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 18px;
 }
 

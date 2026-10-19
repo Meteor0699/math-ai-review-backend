@@ -3,22 +3,29 @@
     <PageHeader title="题库练习" description="按课程、章节、题型和难度找到当前需要的题目。" />
 
     <section class="filter-panel">
-      <el-input v-model="filters.keyword" :prefix-icon="Search" clearable placeholder="搜索题目标题或题干" @keyup.enter="applyFilters" />
-      <el-select v-model="filters.courseId" clearable placeholder="全部课程" @change="handleCourseChange">
+      <el-input
+        v-model="filters.keyword"
+        :prefix-icon="Search"
+        clearable
+        placeholder="搜索题目标题或题干"
+        aria-label="搜索题目标题或题干"
+        @keyup.enter="applyFilters"
+      />
+      <el-select v-model="filters.courseId" clearable placeholder="全部课程" aria-label="课程" @change="handleCourseChange">
         <el-option v-for="course in courses" :key="course.id" :label="course.courseName" :value="course.id" />
       </el-select>
-      <el-select v-model="filters.chapterId" clearable placeholder="全部章节" :disabled="!filters.courseId">
+      <el-select v-model="filters.chapterId" clearable placeholder="全部章节" aria-label="章节" :disabled="!filters.courseId">
         <el-option v-for="chapter in chapters" :key="chapter.id" :label="chapter.chapterName || chapter.title" :value="chapter.id" />
       </el-select>
-      <el-select v-model="filters.questionType" clearable placeholder="全部题型">
+      <el-select v-model="filters.questionType" clearable placeholder="全部题型" aria-label="题型">
         <el-option v-for="item in questionTypes" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
-      <el-select v-model="filters.difficulty" clearable placeholder="全部难度">
+      <el-select v-model="filters.difficulty" clearable placeholder="全部难度" aria-label="难度">
         <el-option label="基础" value="basic" />
         <el-option label="中等" value="medium" />
         <el-option label="较难" value="hard" />
       </el-select>
-      <el-input v-model="filters.source" clearable placeholder="题目来源" />
+      <el-input v-model="filters.source" clearable placeholder="题目来源" aria-label="题目来源" />
       <div class="filter-actions">
         <el-button type="primary" :icon="Search" @click="applyFilters">筛选</el-button>
         <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
@@ -35,7 +42,16 @@
     </div>
 
     <div v-else class="question-list">
-      <article v-for="(question, index) in questions" :key="question.id" class="question-card" @click="$router.push(`/questions/${question.id}`)">
+      <div
+        v-for="(question, index) in questions"
+        :key="question.id"
+        class="question-card"
+        role="link"
+        tabindex="0"
+        @click="$router.push(`/questions/${question.id}`)"
+        @keydown.enter.self="$router.push(`/questions/${question.id}`)"
+        @keydown.space.prevent.self="$router.push(`/questions/${question.id}`)"
+      >
         <span class="question-number">{{ String((page - 1) * pageSize + index + 1).padStart(2, '0') }}</span>
         <div class="question-copy">
           <h2>{{ question.title || '未命名题目' }}</h2>
@@ -51,7 +67,7 @@
           </div>
         </div>
         <el-button type="primary" plain>查看题目</el-button>
-      </article>
+      </div>
       <el-empty v-if="!questions.length" description="没有找到符合条件的题目，请调整筛选条件" />
     </div>
 
@@ -180,9 +196,13 @@ function difficultyType(value) {
 </script>
 
 <style scoped>
+/* Flex + wrap instead of a 7 column grid. The grid needed ~1100px of content
+   width, so between roughly 1200px and 1400px viewports it pushed the whole
+   page into horizontal scrolling. Controls now shrink and wrap instead. */
 .filter-panel {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(130px, 0.7fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   padding: 16px;
   border: 1px solid var(--color-border);
@@ -190,9 +210,21 @@ function difficultyType(value) {
   background: var(--color-surface);
 }
 
+.filter-panel > .el-input:first-child {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.filter-panel > .el-input,
+.filter-panel > .el-select {
+  flex: 1 1 150px;
+  min-width: 132px;
+}
+
 .filter-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;
 }
 
 .result-header {
@@ -237,6 +269,11 @@ function difficultyType(value) {
 .question-card:hover {
   transform: translateY(-2px);
   border-color: var(--color-primary);
+}
+
+.question-card:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .question-number {
@@ -289,20 +326,16 @@ function difficultyType(value) {
   margin-top: 24px;
 }
 
-@media (max-width: 1200px) {
-  .filter-panel {
-    grid-template-columns: repeat(3, minmax(160px, 1fr));
-  }
-}
-
 @media (max-width: 700px) {
-  .filter-panel {
-    grid-template-columns: 1fr 1fr;
+  .filter-panel > .el-input,
+  .filter-panel > .el-select {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
-  .filter-panel > :first-child,
   .filter-actions {
-    grid-column: 1 / -1;
+    width: 100%;
+    margin-left: 0;
   }
 
   .filter-actions .el-button {

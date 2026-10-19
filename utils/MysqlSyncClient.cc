@@ -1,9 +1,11 @@
 #include "utils/MysqlSyncClient.h"
 
 #include <drogon/drogon.h>
+#include <errmsg.h>
 #include <mysql.h>
 
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <condition_variable>
 #include <cstdlib>
@@ -73,6 +75,14 @@ std::string urlDecode(const std::string &value)
         output.push_back(value[i]);
     }
     return output;
+}
+
+std::string toUpper(std::string value)
+{
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::toupper(ch));
+    });
+    return value;
 }
 
 }
@@ -243,6 +253,13 @@ DbConfig loadConfig()
 
 using MysqlPtr = std::unique_ptr<MYSQL, decltype(&mysql_close)>;
 
+[[noreturn]] void throwMysqlError(MYSQL *connection, const char *context)
+{
+    const auto code = mysql_errno(connection);
+    const std::string message = mysql_error(connection);
+    throw Error(std::string(context) + ": " + message, code);
+}
+
 MysqlPtr createConnection()
 {
     const auto config = loadConfig();
@@ -258,8 +275,9 @@ MysqlPtr createConnection()
     mysql_options(conn.get(), MYSQL_OPT_READ_TIMEOUT, &timeout);
     mysql_options(conn.get(), MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
-    const std::string sslMode = getenvString("DB_SSL_MODE", "DISABLED");
-    if (sslMode == "REQUIRED" || sslMode == "PREFERRED")
+    const std::string sslMode = toUpper(getenvString("DB_SSL_MODE", "DISABLED"));
+    const bool verifyServerCertificate = sslMode == "VERIFY_CA" || sslMode == "VERIFY_IDENTITY";
+    if (sslMode == "REQUIRED" || sslMode == "PREFERRED" || verifyServerCertificate)
     {
         const auto sslCa = getenvString("DB_SSL_CA");
         mysql_ssl_set(conn.get(),
@@ -269,7 +287,19 @@ MysqlPtr createConnection()
                       nullptr,
                       nullptr);
         my_bool enforceSsl = 1;
+        my_bool enforceVerify = verifyServerCertificate ? 1 : 0;
         mysql_optionsv(conn.get(), MYSQL_OPT_SSL_ENFORCE, &enforceSsl);
+        mysql_optionsv(conn.get(), MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &enforceVerify);
+
+        if (!verifyServerCertificate)
+        {
+            static std::once_flag warned;
+            std::call_once(warned, [] {
+                LOG_WARN << "DB_SSL_MODE=" << getenvString("DB_SSL_MODE", "DISABLED")
+                         << " encrypts the connection but accepts any server certificate; use "
+                            "DB_SSL_MODE=VERIFY_CA with DB_SSL_CA, or VERIFY_IDENTITY, to prevent MITM";
+            });
+        }
     }
     else
     {
@@ -287,12 +317,12 @@ MysqlPtr createConnection()
                             nullptr,
                             0))
     {
-        throw Error(mysql_error(conn.get()));
+        throwMysqlError(conn.get(), "mysql_real_connect failed");
     }
 
     if (mysql_set_character_set(conn.get(), "utf8mb4") != 0)
     {
-        throw Error(mysql_error(conn.get()));
+        throwMysqlError(conn.get(), "failed to select utf8mb4");
     }
 
     static const std::string normalizeSqlMode =
@@ -301,7 +331,7 @@ MysqlPtr createConnection()
     if (mysql_real_query(conn.get(), normalizeSqlMode.c_str(),
                          static_cast<unsigned long>(normalizeSqlMode.size())) != 0)
     {
-        throw Error(mysql_error(conn.get()));
+        throwMysqlError(conn.get(), "failed to normalize sql_mode");
     }
     return conn;
 }
@@ -333,6 +363,24 @@ class ConnectionLease
     bool healthy_{true};
 };
 
+struct IdleConnection
+{
+    MYSQL *handle;
+    std::chrono::steady_clock::time_point idleSince;
+};
+
+// A pooled connection that has been idle for longer than this window is
+// re-validated with mysql_ping before it is handed out. Pinging on every
+// acquire costs one extra round trip per query, which nearly doubles the
+// latency of each database-backed request. Set DB_POOL_IDLE_PING_SECONDS=0 to
+// restore the old ping-on-every-acquire behaviour.
+std::chrono::steady_clock::duration idlePingInterval()
+{
+    static const auto interval = std::chrono::seconds(
+        std::clamp<std::size_t>(getenvUInt("DB_POOL_IDLE_PING_SECONDS", 60), 0, 3600));
+    return interval;
+}
+
 class ConnectionPool
 {
   public:
@@ -345,9 +393,9 @@ class ConnectionPool
 
     ~ConnectionPool()
     {
-        for (auto *connection : idle_)
+        for (const auto &entry : idle_)
         {
-            mysql_close(connection);
+            mysql_close(entry.handle);
         }
     }
 
@@ -357,6 +405,7 @@ class ConnectionPool
         {
             MYSQL *connection = nullptr;
             bool createNew = false;
+            bool needsPing = false;
             {
                 std::unique_lock<std::mutex> lock(mutex_);
                 if (!available_.wait_for(lock, acquireTimeout_,
@@ -366,8 +415,12 @@ class ConnectionPool
                 }
                 if (!idle_.empty())
                 {
-                    connection = idle_.back();
+                    connection = idle_.back().handle;
+                    const auto idleSince = idle_.back().idleSince;
                     idle_.pop_back();
+                    const auto interval = idlePingInterval();
+                    needsPing = interval.count() == 0 ||
+                                std::chrono::steady_clock::now() - idleSince >= interval;
                 }
                 else
                 {
@@ -390,7 +443,7 @@ class ConnectionPool
                     throw;
                 }
             }
-            else if (mysql_ping(connection) != 0)
+            else if (needsPing && mysql_ping(connection) != 0)
             {
                 mysql_close(connection);
                 std::lock_guard<std::mutex> lock(mutex_);
@@ -412,7 +465,7 @@ class ConnectionPool
         std::lock_guard<std::mutex> lock(mutex_);
         if (healthy)
         {
-            idle_.push_back(connection);
+            idle_.push_back({connection, std::chrono::steady_clock::now()});
         }
         else
         {
@@ -425,7 +478,7 @@ class ConnectionPool
   private:
     std::mutex mutex_;
     std::condition_variable available_;
-    std::vector<MYSQL *> idle_;
+    std::vector<IdleConnection> idle_;
     std::size_t total_{0};
     std::size_t maximumSize_;
     std::chrono::milliseconds acquireTimeout_;
@@ -445,11 +498,28 @@ ConnectionPool &connectionPool()
     return pool;
 }
 
+// True when the failure is a broken/dead transport rather than a rejected
+// statement. Only these may discard the pooled connection.
+bool isConnectionLevelError(unsigned int code)
+{
+    switch (code)
+    {
+    case CR_SERVER_GONE_ERROR:
+    case CR_SERVER_LOST:
+    case CR_SERVER_HANDSHAKE_ERR:
+    case CR_CONN_HOST_ERROR:
+    case CR_CONNECTION_ERROR:
+        return true;
+    default:
+        return false;
+    }
+}
+
 Result executeOnConnection(MYSQL *connection, const std::string &sql)
 {
     if (mysql_real_query(connection, sql.c_str(), static_cast<unsigned long>(sql.size())) != 0)
     {
-        throw Error(mysql_error(connection));
+        throwMysqlError(connection, "mysql_real_query failed");
     }
 
     Result output;
@@ -462,7 +532,7 @@ Result executeOnConnection(MYSQL *connection, const std::string &sql)
     {
         if (mysql_errno(connection) != 0)
         {
-            throw Error(mysql_error(connection));
+            throwMysqlError(connection, "mysql_store_result failed");
         }
         return output;
     }
@@ -494,19 +564,6 @@ Result executeOnConnection(MYSQL *connection, const std::string &sql)
 
 } // namespace
 
-Json::Value configSummary()
-{
-    const auto config = loadConfig();
-    Json::Value data;
-    data["host"] = config.host;
-    data["port"] = config.port;
-    data["database"] = config.dbname;
-    data["user"] = config.user;
-    data["sslMode"] = getenvString("DB_SSL_MODE", "DISABLED");
-    data["hasPassword"] = !config.password.empty();
-    return data;
-}
-
 bool Row::isNull(const std::string &field) const
 {
     return nullFields.find(field) != nullFields.end();
@@ -529,7 +586,14 @@ long long Row::getInt64(const std::string &field, long long fallback) const
     {
         return fallback;
     }
-    return std::stoll(value);
+
+    long long parsed{};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (result.ec != std::errc{} || result.ptr != value.data() + value.size())
+    {
+        return fallback;
+    }
+    return parsed;
 }
 
 int Row::getInt(const std::string &field, int fallback) const
@@ -539,13 +603,48 @@ int Row::getInt(const std::string &field, int fallback) const
     {
         return fallback;
     }
-    return std::stoi(value);
+
+    int parsed{};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (result.ec != std::errc{} || result.ptr != value.data() + value.size())
+    {
+        return fallback;
+    }
+    return parsed;
 }
 
 Result execute(const std::string &sql)
 {
-    auto conn = connectionPool().acquire();
-    return executeOnConnection(conn.get(), sql);
+    for (int attempt = 0;; ++attempt)
+    {
+        auto conn = connectionPool().acquire();
+        try
+        {
+            return executeOnConnection(conn.get(), sql);
+        }
+        catch (const Error &error)
+        {
+            if (!isConnectionLevelError(error.code()))
+            {
+                // Statement level failure (syntax, constraint, bad data): the
+                // connection itself is fine, so keep it in the pool.
+                throw;
+            }
+
+            conn.invalidate();
+
+            // CR_SERVER_GONE_ERROR means the statement was never delivered to
+            // the server, so replaying it once on a fresh connection is safe.
+            // Other transport failures leave the outcome unknown, so they are
+            // not retried to avoid applying a write twice.
+            if (error.code() == CR_SERVER_GONE_ERROR && attempt == 0)
+            {
+                LOG_WARN << "MySQL server closed an idle pooled connection; retrying the statement once";
+                continue;
+            }
+            throw;
+        }
+    }
 }
 
 std::vector<Result> executeTransaction(const std::vector<std::string> &statements)
@@ -612,20 +711,6 @@ std::string escape(const std::string &value)
 std::string quote(const std::string &value)
 {
     return "'" + escape(value) + "'";
-}
-
-std::string nullableString(const std::string &value)
-{
-    return value.empty() ? "NULL" : quote(value);
-}
-
-std::string nullableInt64(const Json::Value &value)
-{
-    if (value.isNull())
-    {
-        return "NULL";
-    }
-    return std::to_string(value.asInt64());
 }
 
 } // namespace mathai::utils::mysql

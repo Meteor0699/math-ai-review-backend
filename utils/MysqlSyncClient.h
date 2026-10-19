@@ -32,15 +32,21 @@ struct Result
 class Error : public std::runtime_error
 {
   public:
-    explicit Error(const std::string &message) : std::runtime_error(message) {}
+    explicit Error(const std::string &message, unsigned int code = 0)
+        : std::runtime_error(message), code_(code)
+    {
+    }
+
+    /// MySQL client error code (mysql_errno); 0 when the failure is local.
+    unsigned int code() const noexcept { return code_; }
+
+  private:
+    unsigned int code_{0};
 };
 
 Result execute(const std::string &sql);
 std::vector<Result> executeTransaction(const std::vector<std::string> &statements);
-Json::Value configSummary();
 std::string escape(const std::string &value);
 std::string quote(const std::string &value);
-std::string nullableString(const std::string &value);
-std::string nullableInt64(const Json::Value &value);
 
 } // namespace mathai::utils::mysql

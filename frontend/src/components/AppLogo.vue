@@ -1,5 +1,5 @@
 <template>
-  <router-link :to="to" class="app-logo" :class="{ compact }" aria-label="数学 AI 复习助手首页">
+  <router-link :to="to" class="app-logo" :class="{ compact }">
     <span class="app-logo__mark">
       <el-icon><DataAnalysis /></el-icon>
     </span>

@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page course-manage">
     <div class="page-header">
-      <h2>课程管理</h2>
+      <h1>课程管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增课程
@@ -9,17 +9,18 @@
     </div>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column label="封面" width="92">
+      <!-- 窄屏只保留「课程名称 + 操作」，其余列收起，避免表格横向溢出 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="70" />
+      <el-table-column v-if="!isCompact" label="封面" width="92">
         <template #default="{ row }">
-          <img v-if="row.coverUrl" class="cover-thumb" :src="row.coverUrl" :alt="row.courseName" />
+          <img v-if="row.coverUrl" class="cover-thumb" :src="row.coverUrl" :alt="row.courseName" width="46" height="64" loading="lazy" decoding="async" />
           <span v-else class="cover-empty">无</span>
         </template>
       </el-table-column>
-      <el-table-column prop="courseName" label="课程名称" min-width="150" />
-      <el-table-column prop="courseCode" label="课程编号" width="150" />
-      <el-table-column prop="courseDesc" label="课程描述" min-width="220" show-overflow-tooltip />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column prop="courseName" label="课程名称" min-width="150" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" prop="courseCode" label="课程编号" width="150" />
+      <el-table-column v-if="!isCompact" prop="courseDesc" label="课程描述" min-width="220" show-overflow-tooltip />
+      <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button size="small" text type="danger" @click="handleDelete(row)">删除</el-button>
@@ -59,6 +60,10 @@
 import { ref, onMounted, reactive } from 'vue'
 import { adminGetCourseList, adminCreateCourse, adminUpdateCourse, adminDeleteCourse } from '../../api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口下收起低优先级列，并取消操作列右侧固定，避免压住数据列
+const isCompact = useIsCompact()
 
 const tableData = ref([])
 const loading = ref(false)
@@ -165,7 +170,7 @@ async function handleDelete(row) {
 }
 
 .cover-empty {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 </style>

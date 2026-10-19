@@ -15,11 +15,11 @@
       </el-tabs>
 
       <div class="study-filters">
-        <el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索题目名称" />
-        <el-select v-model="courseFilter" clearable placeholder="全部课程">
+        <el-input v-model="keyword" :prefix-icon="Search" clearable placeholder="搜索题目名称" aria-label="搜索题目名称" />
+        <el-select v-model="courseFilter" clearable placeholder="全部课程" aria-label="课程">
           <el-option v-for="course in availableCourses" :key="course" :label="course" :value="course" />
         </el-select>
-        <el-select v-model="typeFilter" clearable placeholder="全部题型">
+        <el-select v-model="typeFilter" clearable placeholder="全部题型" aria-label="题型">
           <el-option v-for="type in availableTypes" :key="type" :label="type" :value="type" />
         </el-select>
       </div>
@@ -171,11 +171,24 @@ async function handleTabChange(name) {
   gap: 7px;
 }
 
+/* Flex + wrap: the previous 3 column grid had a ~620px minimum, which pushed
+   the panel (and the whole page) into horizontal scrolling between roughly
+   761px and 900px viewports. */
 .study-filters {
-  display: grid;
-  grid-template-columns: minmax(240px, 1fr) 180px 180px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 6px 0 18px;
+}
+
+.study-filters > .el-input {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.study-filters > .el-select {
+  flex: 1 1 160px;
+  min-width: 140px;
 }
 
 .study-list {
@@ -249,17 +262,15 @@ async function handleTabChange(name) {
   margin-top: 22px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .study-panel {
     padding: 0 14px 16px;
   }
 
-  .study-filters {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .study-filters > :first-child {
-    grid-column: 1 / -1;
+  .study-filters > .el-input,
+  .study-filters > .el-select {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 
   .study-row {

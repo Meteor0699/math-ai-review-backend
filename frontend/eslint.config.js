@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
+import pluginVueA11y from 'eslint-plugin-vuejs-accessibility'
 import globals from 'globals'
 
 export default [
@@ -27,6 +28,23 @@ export default [
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'error',
       'vue/singleline-html-element-content-newline': 'off'
+    }
+  },
+  {
+    // Front-End Checklist `accessibility-testing`: catch a11y regressions at
+    // lint time. Kept at warn level so the existing codebase does not fail
+    // `npm run lint`; promote to error once the remaining hits are cleared.
+    files: ['src/**/*.vue'],
+    plugins: { 'vuejs-accessibility': pluginVueA11y },
+    rules: {
+      'vuejs-accessibility/alt-text': 'warn',
+      'vuejs-accessibility/anchor-has-content': 'warn',
+      'vuejs-accessibility/aria-props': 'warn',
+      'vuejs-accessibility/aria-role': 'warn',
+      'vuejs-accessibility/click-events-have-key-events': 'warn',
+      'vuejs-accessibility/form-control-has-label': 'warn',
+      'vuejs-accessibility/label-has-for': 'warn',
+      'vuejs-accessibility/no-static-element-interactions': 'warn'
     }
   }
 ]

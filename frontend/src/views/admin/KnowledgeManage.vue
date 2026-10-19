@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page knowledge-manage">
     <div class="page-header">
-      <h2>知识点管理</h2>
+      <h1>知识点管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增知识点
@@ -22,17 +22,18 @@
     </el-form>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="60" />
+      <!-- 紧凑视口保留「知识点标题 + 考核频率 + 操作」；极窄屏再收起考核频率 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="60" />
       <el-table-column prop="title" label="知识点标题" min-width="180" show-overflow-tooltip />
-      <el-table-column prop="courseName" label="所属课程" width="120" />
-      <el-table-column prop="chapterName" label="所属章节" width="120" />
-      <el-table-column prop="examFrequency" label="考核频率" width="100">
+      <el-table-column v-if="!isCompact" prop="courseName" label="所属课程" width="120" />
+      <el-table-column v-if="!isCompact" prop="chapterName" label="所属章节" width="120" />
+      <el-table-column v-if="!isNarrow" prop="examFrequency" label="考核频率" width="100">
         <template #default="{ row }">
           <el-tag :type="freqTagType(row.examFrequency)" size="small">{{ row.examFrequency || '一般' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="sortOrder" label="排序" width="70" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column v-if="!isCompact" prop="sortOrder" label="排序" width="70" />
+      <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button size="small" text type="danger" @click="handleDelete(row)">删除</el-button>
@@ -101,6 +102,11 @@ import {
   adminGetCourseList, adminGetChapterList
 } from '../../api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口（≤1400px）收起低优先级列；极窄视口（≤900px）只留标题 + 操作
+const isCompact = useIsCompact()
+const isNarrow = useIsCompact('(max-width: 900px)')
 
 const tableData = ref([])
 const courseList = ref([])

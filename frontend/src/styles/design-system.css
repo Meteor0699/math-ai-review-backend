@@ -13,8 +13,21 @@
   --color-danger: #ef4444;
   --color-danger-light: #fef2f2;
   --color-info: #64748b;
+  /* Text-safe semantic colours (>= 4.5:1 on white). The bright --color-danger /
+     --color-success / --color-warning tokens above stay for fills (tags, badges,
+     solid buttons); text must use these instead. */
+  --color-danger-text: #b91c1c;
+  --color-success-text: #15803d;
+  --color-warning-text: #b45309;
   --color-text-primary: #1f2937;
-  --color-text-secondary: #64748b;
+  --color-text-secondary: #5b6b80;
+  /* Decorative-only: 2.56:1 on white, so never use these for text. Text usages
+     were replaced with --color-text-secondary in Login.vue, StudentLayout.vue,
+     AdminLayout.vue, student/CourseDetail.vue, student/PaperList.vue,
+     admin/CourseManage.vue, admin/PaperManage.vue and components/AgentPanel.vue.
+     The remaining uses are decorative arrows (Home.vue quick-link arrow,
+     CourseDetail.vue chapter arrow, AdminHome.vue management arrow) and
+     disabled controls (AgentPanel.vue), which WCAG exempts. */
   --color-text-tertiary: #94a3b8;
   --color-text-muted: #94a3b8;
   --color-border: #e2e8f0;
@@ -112,6 +125,26 @@ p {
   margin: 0 auto;
 }
 
+/* Shared by StudentLayout.vue and AdminLayout.vue: off-screen until focused,
+   then pinned to the top-left corner above the sticky headers. */
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: -100px;
+  left: 0;
+  padding: 10px 18px;
+  border-radius: 0 0 var(--radius-md) 0;
+  color: #fff;
+  background: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--motion-fast) var(--ease-out);
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 .app-panel {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -168,11 +201,49 @@ p {
   transition: all var(--motion-fast) var(--ease-out);
 }
 
+/* Element Plus paints text buttons with the bright semantic fills. Text buttons
+   render as small text on the page background, where those shades fall below
+   WCAG AA, so their labels use the text-safe tokens instead. Disabled buttons
+   keep the muted Element Plus styling. */
+.el-button.is-text.el-button--danger:not(.is-disabled),
+.el-button--danger.is-text:not(.is-disabled) {
+  color: var(--color-danger-text);
+}
+
+.el-button.is-text.el-button--success:not(.is-disabled),
+.el-button--success.is-text:not(.is-disabled) {
+  color: var(--color-success-text);
+}
+
+.el-button.is-text.el-button--warning:not(.is-disabled),
+.el-button--warning.is-text:not(.is-disabled) {
+  color: var(--color-warning-text);
+}
+
+/* The only plain semantic button in the app (QuestionDetail.vue) puts #ef4444
+   on a light red fill, which is also below AA, so it uses the same token. */
+.el-button.is-plain.el-button--danger:not(.is-disabled),
+.el-button--danger.is-plain:not(.is-disabled) {
+  color: var(--color-danger-text);
+}
+
+/* 3px #2563eb is 5.17:1 against the page background; the previous 18% tint was
+   about 1.2:1 and effectively invisible. */
 .el-button:focus-visible,
 .el-input__wrapper:focus-within,
 .el-select__wrapper:focus-within {
-  outline: 3px solid rgba(37, 99, 235, 0.18);
+  outline: 3px solid #2563eb;
   outline-offset: 1px;
+}
+
+/* Plain buttons, icon buttons and links had no visible focus indicator at all. */
+.el-button:focus-visible,
+.icon-button:focus-visible,
+.collapse-button:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .el-input__wrapper,
@@ -241,6 +312,7 @@ p {
   gap: var(--space-4);
 }
 
+.management-page .page-header h1,
 .management-page .page-header h2 {
   margin: 0;
   color: var(--color-text-primary);
@@ -290,6 +362,7 @@ p {
     align-items: flex-start;
   }
 
+  .management-page .page-header h1,
   .management-page .page-header h2 {
     font-size: var(--text-lg);
   }
@@ -325,3 +398,50 @@ p {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* axe color-contrast: Element Plus ships .el-tag--info as #909399 on #f4f4f5
+   (about 2.8:1). Use a slate pair that clears AA while staying "informational". */
+.el-tag.el-tag--info {
+  color: #475569;
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+/* axe color-contrast: Element Plus placeholder grey (#a8abb2) is 2.29:1 on
+   white and 2.14:1 on the muted select background. Use the accessible
+   secondary token for placeholder text as well. */
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder,
+.el-select__placeholder,
+.el-select__placeholder.is-transparent,
+.is-disabled .el-select__placeholder {
+  color: #5b6b80;
+}
+
+/* Element Plus applies its placeholder colour through these variables with a
+   more specific selector than a single class, so override the variables (and
+   keep an !important fallback for the select placeholder text node). */
+:root {
+  --el-text-color-placeholder: #5b6b80;
+  --el-text-color-disabled: #5b6b80;
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: #5b6b80 !important;
+}
+
+.el-select__placeholder,
+.el-select__placeholder.is-transparent,
+.el-select__placeholder.is-transparent > span,
+.is-disabled .el-select__placeholder,
+.is-disabled .el-select__placeholder > span {
+  color: #5b6b80 !important;
+}
+
+/* Element Plus tag text uses the bright semantic palette (#22c55e 2.27:1,
+   #f59e0b 2.14:1, #ef4444 3.76:1 on white). Tags are text, so use the
+   text-safe pair for the label and keep the bright hue for the fill. */
+.el-tag.el-tag--success { color: #15803d; background-color: #ecfdf3; border-color: #bbf7d0; }
+.el-tag.el-tag--warning { color: #b45309; background-color: #fffbeb; border-color: #fde68a; }
+.el-tag.el-tag--danger { color: #b91c1c; background-color: #fef2f2; border-color: #fecaca; }

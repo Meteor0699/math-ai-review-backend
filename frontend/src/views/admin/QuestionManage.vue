@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page question-manage">
     <div class="page-header">
-      <h2>题库管理</h2>
+      <h1>题库管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增题目
@@ -42,28 +42,29 @@
     </el-form>
 
     <el-table :data="tableData" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="courseName" label="课程" width="100" />
-      <el-table-column prop="chapterName" label="章节" width="100" />
-      <el-table-column prop="content" label="题干" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="questionType" label="题型" width="80">
+      <!-- 紧凑视口保留「题干 + 题型 + 难度 + 操作」；极窄屏只留题干 + 操作 -->
+      <el-table-column v-if="!isCompact" prop="id" label="ID" width="60" />
+      <el-table-column v-if="!isCompact" prop="courseName" label="课程" width="100" />
+      <el-table-column v-if="!isCompact" prop="chapterName" label="章节" width="100" />
+      <el-table-column prop="content" label="题干" :min-width="isNarrow ? 160 : 200" show-overflow-tooltip />
+      <el-table-column v-if="!isNarrow" prop="questionType" label="题型" width="80">
         <template #default="{ row }">
           {{ typeLabel(row.questionType) }}
         </template>
       </el-table-column>
-      <el-table-column prop="difficulty" label="难度" width="80">
+      <el-table-column v-if="!isNarrow" prop="difficulty" label="难度" width="80">
         <template #default="{ row }">
           <el-tag :type="diffTagType(row.difficulty)" size="small">{{ diffLabel(row.difficulty) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="source" label="来源" width="120" show-overflow-tooltip />
-      <el-table-column prop="sourceYear" label="年份" width="70" />
-      <el-table-column prop="fromExamPaper" label="往年试题" width="90">
+      <el-table-column v-if="!isCompact" prop="source" label="来源" width="120" show-overflow-tooltip />
+      <el-table-column v-if="!isCompact" prop="sourceYear" label="年份" width="70" />
+      <el-table-column v-if="!isCompact" prop="fromExamPaper" label="往年试题" width="90">
         <template #default="{ row }">
           <el-tag :type="row.fromExamPaper ? 'warning' : 'info'" size="small">{{ row.fromExamPaper ? '是' : '否' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" width="160" :fixed="isCompact ? false : 'right'">
         <template #default="{ row }">
           <el-button size="small" text type="primary" @click="openDialog(row)">编辑</el-button>
           <el-button size="small" text type="danger" @click="handleDelete(row)">删除</el-button>
@@ -153,6 +154,11 @@ import {
   adminGetCourseList, adminGetChapterList
 } from '../../api/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useIsCompact } from '../../composables/useCompactViewport'
+
+// 紧凑视口（≤1400px）收起低优先级列；极窄视口（≤900px）只留题干 + 操作
+const isCompact = useIsCompact()
+const isNarrow = useIsCompact('(max-width: 900px)')
 
 const tableData = ref([])
 const courseList = ref([])

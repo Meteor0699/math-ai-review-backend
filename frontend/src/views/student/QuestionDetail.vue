@@ -34,7 +34,7 @@
             <FormulaContent :content="question.content" />
           </div>
 
-          <div v-if="question.options?.length" class="question-options">
+          <div v-if="question.options?.length" :class="['question-options', { 'two-column': optionsAreShort }]">
             <button
               v-for="option in question.options"
               :key="option.id"
@@ -117,6 +117,7 @@
                 maxlength="500"
                 show-word-limit
                 placeholder="例如：为什么这里可以使用洛必达法则？"
+                aria-label="向 AI 追问这道题"
               />
               <div class="follow-up-actions">
                 <el-button
@@ -135,6 +136,9 @@
             <span>需要提示时再生成讲解，先给自己一点独立思考的时间。</span>
           </div>
         </section>
+
+        <!-- 常驻 AI 学习助手：多轮对话 + 流式输出 + 工具调用可视化 -->
+        <AgentPanel :key="questionId" :question-id="questionId" />
       </main>
 
       <aside class="study-panel">
@@ -166,10 +170,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowLeft, Hide, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import AgentPanel from '../../components/AgentPanel.vue'
 import FormulaContent from '../../components/FormulaContent.vue'
 import PageHeader from '../../components/PageHeader.vue'
 import {
@@ -199,6 +204,18 @@ const answerLoading = ref(false)
 const followUpLoading = ref(false)
 const studyLoading = ref(false)
 const wrongLoading = ref(false)
+
+// Four short choices (A/B/C/D like "1", "0", "+∞") stretched across a full
+// width column leave the page looking empty, so those are laid out two per
+// row. Longer option text keeps the single column layout where it can wrap.
+const optionsAreShort = computed(() => {
+  const options = question.value?.options || []
+  if (options.length < 2 || options.length > 6) {
+    return false
+  }
+  const longest = Math.max(...options.map((option) => String(option.optionContent || '').length))
+  return longest <= 24
+})
 
 onMounted(async () => {
   loading.value = true
@@ -322,6 +339,15 @@ async function submitFollowUp() {
   gap: 20px;
 }
 
+/* The status panel is much shorter than the question column, so keep it in
+   view instead of leaving a tall empty gutter next to the content. */
+@media (min-width: 981px) {
+  .detail-layout > .study-panel {
+    position: sticky;
+    top: 88px;
+  }
+}
+
 .question-column {
   display: grid;
   gap: 18px;
@@ -335,7 +361,7 @@ async function submitFollowUp() {
 }
 
 .question-content {
-  min-height: 120px;
+  min-height: 72px;
   font-size: 16px;
 }
 
@@ -353,13 +379,17 @@ async function submitFollowUp() {
   margin-top: 24px;
 }
 
+.question-options.two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .question-options button {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
-  padding: 10px 14px;
+  min-height: 46px;
+  padding: 8px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   text-align: left;

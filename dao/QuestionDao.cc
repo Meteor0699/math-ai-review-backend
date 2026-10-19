@@ -164,7 +164,7 @@ void QuestionDao::listActive(const drogon::HttpRequestPtr &request, int page, in
         const auto total = static_cast<Json::UInt64>(countResult.rows[0].getInt64("total"));
         const auto result = mathai::utils::mysql::execute(
             "SELECT id, course_id, chapter_id, knowledge_point_id, exam_paper_id, title, content, question_type, difficulty, "
-            "standard_answer, normal_explanation, source, source_year, from_exam_paper, paper_question_no, sort_order, status "
+            "source, source_year, from_exam_paper, paper_question_no, sort_order, status "
             "FROM question" + whereStr + " ORDER BY sort_order ASC, id ASC LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset));
         Json::Value items(Json::arrayValue);
         for (const auto &row : result.rows) items.append(questionRowToJson(row, false));
@@ -212,7 +212,7 @@ void QuestionDao::findActiveById(long long id, JsonCallback onSuccess, ErrorCall
     {
         const auto result = mathai::utils::mysql::execute(
             "SELECT id, course_id, chapter_id, knowledge_point_id, exam_paper_id, title, content, question_type, difficulty, "
-            "standard_answer, normal_explanation, source, source_year, from_exam_paper, paper_question_no, sort_order, status "
+            "source, source_year, from_exam_paper, paper_question_no, sort_order, status "
             "FROM question WHERE id = " + std::to_string(id) + " AND status = 1 LIMIT 1");
         if (result.rows.empty()) { onSuccess(Json::Value(Json::nullValue)); return; }
         onSuccess(questionRowToJson(result.rows[0], false));

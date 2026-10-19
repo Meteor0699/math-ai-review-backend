@@ -8,7 +8,7 @@
       </p>
       <div class="course-preview">
         <div v-for="course in coursePreview" :key="course.name" class="preview-item">
-          <img :src="course.cover" :alt="`${course.name}教材封面`" />
+          <img :src="course.cover" :alt="`${course.name}教材封面`" width="52" height="68" loading="lazy" decoding="async" />
           <span>{{ course.name }}</span>
         </div>
       </div>
@@ -29,13 +29,14 @@
         <el-tab-pane label="登录" name="login">
           <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" label-width="0" size="large">
             <el-form-item prop="username">
-              <el-input v-model="loginForm.username" placeholder="用户名" :prefix-icon="User" clearable />
+              <el-input v-model="loginForm.username" placeholder="用户名" aria-label="用户名" :prefix-icon="User" clearable />
             </el-form-item>
             <el-form-item prop="password">
               <el-input
                 v-model="loginForm.password"
                 type="password"
                 placeholder="密码"
+                aria-label="密码"
                 :prefix-icon="Lock"
                 show-password
                 @keyup.enter="handleLogin"
@@ -52,19 +53,20 @@
         <el-tab-pane label="学生注册" name="register">
           <el-form ref="registerFormRef" :model="registerForm" :rules="registerRules" label-width="0" size="large">
             <el-form-item prop="username">
-              <el-input v-model="registerForm.username" placeholder="设置用户名" :prefix-icon="User" clearable />
+              <el-input v-model="registerForm.username" placeholder="设置用户名" aria-label="设置用户名" :prefix-icon="User" clearable />
             </el-form-item>
             <el-form-item prop="realName">
-              <el-input v-model="registerForm.realName" placeholder="真实姓名" :prefix-icon="UserFilled" clearable />
+              <el-input v-model="registerForm.realName" placeholder="真实姓名" aria-label="真实姓名" :prefix-icon="UserFilled" clearable />
             </el-form-item>
             <el-form-item prop="studentNo">
-              <el-input v-model="registerForm.studentNo" placeholder="学号（可选）" :prefix-icon="Tickets" clearable />
+              <el-input v-model="registerForm.studentNo" placeholder="学号（可选）" aria-label="学号（可选）" :prefix-icon="Tickets" clearable />
             </el-form-item>
             <el-form-item prop="password">
               <el-input
                 v-model="registerForm.password"
                 type="password"
                 placeholder="设置密码，至少 6 位"
+                aria-label="设置密码，至少 6 位"
                 :prefix-icon="Lock"
                 show-password
               />
@@ -74,6 +76,7 @@
                 v-model="registerForm.confirmPassword"
                 type="password"
                 placeholder="再次输入密码"
+                aria-label="再次输入密码"
                 :prefix-icon="Lock"
                 show-password
                 @keyup.enter="handleRegister"
@@ -324,7 +327,7 @@ async function handleRegister() {
   margin-top: 12px;
   text-align: center;
   font-size: 12px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 900px) {

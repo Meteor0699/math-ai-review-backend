@@ -37,11 +37,24 @@
           <el-button text type="primary" @click="router.push('/courses')">查看全部</el-button>
         </div>
         <div v-loading="courseLoading" class="course-list">
-          <article v-for="course in courses.slice(0, 3)" :key="course.id" class="course-row" @click="router.push(`/courses/${course.id}`)">
+          <div
+            v-for="course in courses.slice(0, 3)"
+            :key="course.id"
+            class="course-row"
+            role="link"
+            tabindex="0"
+            @click="router.push(`/courses/${course.id}`)"
+            @keydown.enter.self="router.push(`/courses/${course.id}`)"
+            @keydown.space.prevent.self="router.push(`/courses/${course.id}`)"
+          >
             <img
               v-if="getPrimaryCourseCover(course)"
               :src="getPrimaryCourseCover(course)"
               :alt="`${course.courseName}课程封面`"
+              width="76"
+              height="76"
+              loading="lazy"
+              decoding="async"
               @error="handleImageError"
             />
             <div class="course-fallback"><el-icon><Collection /></el-icon></div>
@@ -51,7 +64,7 @@
               <span>学习记录 {{ recordCountForCourse(course.id) }} 条</span>
             </div>
             <el-button type="primary" plain>进入学习</el-button>
-          </article>
+          </div>
           <el-empty v-if="!courseLoading && !courses.length" description="暂无已开放课程" />
         </div>
       </section>
@@ -179,7 +192,7 @@ function handleImageError(event) {
 
 .welcome-copy > span {
   font-size: var(--text-sm);
-  opacity: 0.86;
+  opacity: 1;
 }
 
 .welcome-copy h1 {
@@ -189,7 +202,7 @@ function handleImageError(event) {
 
 .welcome-copy p {
   max-width: 620px;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .welcome-actions {
@@ -292,6 +305,11 @@ function handleImageError(event) {
   background: var(--color-primary-light);
 }
 
+.course-row:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .course-row img,
 .course-fallback {
   grid-area: 1 / 1;
@@ -322,6 +340,8 @@ function handleImageError(event) {
   font-size: var(--text-md);
 }
 
+/* One line cut every course description mid sentence; two lines fit the whole
+   sentence for the seeded course data without making the row taller. */
 .course-row__content p {
   display: -webkit-box;
   overflow: hidden;
@@ -329,7 +349,7 @@ function handleImageError(event) {
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
 }
 
 .course-row__content span {
@@ -452,6 +472,13 @@ function handleImageError(event) {
   .stats-grid,
   .quick-links {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The fixed 320px route card left the copy column only ~56px wide at tablet
+     widths, so the heading and buttons overflowed the hero. Stack it earlier. */
+  .welcome-panel {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
   }
 
   .home-columns {
