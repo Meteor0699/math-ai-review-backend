@@ -945,9 +945,15 @@ AgentTurnHandle AgentService::prepareTurn(const AgentTurnRequest &request,
     return handle;
 }
 
-// A turn is a chain of model calls. Nothing blocks: each model call is submitted
-// to the shared AiExecutor and the callback for that call drives the next round,
-// so the controller's IO thread only ever pays for the submit.
+// A turn is a chain of model calls driven by one dedicated orchestrator thread
+// (the detached thread started by generateTurn), never by an AiExecutor worker.
+// The worker that owns a stream only records its outcome and wakes the
+// orchestrator; the orchestrator then executes the requested tools and submits
+// the next round. Running the continuation on the worker instead would make it
+// submit the next model call and then wait for that call on a pool thread: with
+// AI_MAX_CONCURRENCY workers and that many concurrent tool-using turns, every
+// worker would wait for a request queued behind the waiting workers themselves
+// and the pool would deadlock until the timeout.
 struct AgentTurnRunner
 {
     const mathai::services::AgentService *service{nullptr};
@@ -967,16 +973,17 @@ struct AgentTurnRunner
 };
 
 // A round that never reports back (a hung socket, a lost callback) must not hold
-// the stream open forever. The counter is shared with the round callback so the
-// timeout cannot race the settle.
+// the stream open forever. `settled` is claimed exactly once, either by the
+// completion callback or by the timeout, so the two can never both settle the
+// turn. `reported` and `result` are written by the callback under `mutex` and
+// read by the orchestrator thread.
 struct RoundGuard
 {
     std::mutex mutex;
     std::condition_variable settledCondition;
-    // Filled by the AiExecutor worker, consumed by the orchestrator thread.
-    mathai::clients::AiStreamResult result;
     std::atomic_bool settled{false};
-    std::atomic_bool reported{false};
+    bool reported{false};
+    mathai::clients::AiStreamResult result;
 };
 
 void failTurn(const mathai::dao::AgentDao &dao,
@@ -1025,6 +1032,18 @@ std::shared_ptr<AgentTurnRunner> makeTurnRunner(const mathai::services::AgentSer
     runner->messages.append(system);
 
     appendModelHistory(loadContextHistory(*dao, conversationId, excludedUserMessageId), runner->messages);
+
+    // The just-written user message is excluded from loadContextHistory() (it
+    // would be duplicated), but nothing else replayed it, so the model never saw
+    // what the student asked in this turn: it answered the previous turn or the
+    // bare question context. Append it as the final model-visible message.
+    if (!request.message.empty())
+    {
+        Json::Value currentUser(Json::objectValue);
+        currentUser["role"] = "user";
+        currentUser["content"] = request.message;
+        runner->messages.append(currentUser);
+    }
     return runner;
 }
 
@@ -1048,15 +1067,10 @@ void finishTurn(const std::shared_ptr<AgentTurnRunner> &runner)
     }
 }
 
-// Executes one model round and then either fails the turn, finishes it, or
-// executes the requested tools and recurses into the next round. Depth is
-// bounded by agentMaximumModelCalls.
-void runRound(const std::shared_ptr<AgentTurnRunner> &runner, int round);
-
-std::shared_ptr<RoundGuard> submitRound(const std::shared_ptr<AgentTurnRunner> &runner, int round);
-
-void continueTurn(const std::shared_ptr<AgentTurnRunner> &runner,
-                  int round,
+// Applies one settled round on the orchestrator thread: fails the turn, finishes
+// it, or executes the requested tools. Returns true when another model round has
+// to be scheduled.
+bool continueTurn(const std::shared_ptr<AgentTurnRunner> &runner,
                   const mathai::clients::AiStreamResult &result)
 {
     runner->answer.content += result.content;
@@ -1076,7 +1090,7 @@ void continueTurn(const std::shared_ptr<AgentTurnRunner> &runner,
         const auto code = result.busy ? std::string("busy") : std::string("ai_unavailable");
         failTurn(*runner->dao, runner->assistantMessageId, runner->answer, runner->callbacks,
                  result.errorMessage.empty() ? std::string("AI request failed") : result.errorMessage, code);
-        return;
+        return false;
     }
 
     if (result.toolCalls.empty())
@@ -1085,10 +1099,10 @@ void continueTurn(const std::shared_ptr<AgentTurnRunner> &runner,
         {
             failTurn(*runner->dao, runner->assistantMessageId, runner->answer, runner->callbacks,
                      "AI returned an empty answer", "ai_unavailable");
-            return;
+            return false;
         }
         finishTurn(runner);
-        return;
+        return false;
     }
 
     Json::Value roundToolCalls(Json::arrayValue);
@@ -1172,46 +1186,34 @@ void continueTurn(const std::shared_ptr<AgentTurnRunner> &runner,
     {
         persistPartial(*runner->dao, runner->assistantMessageId, runner->answer,
                        true);
-        return;
+        return false;
     }
 
-    if (round + 1 >= mathai::services::agentMaximumModelCalls)
-    {
-        // Budget exhausted with tools still pending: keep the text produced so
-        // far rather than failing the whole turn.
-        finishTurn(runner);
-        return;
-    }
-
-    runRound(runner, round + 1);
+    // The round budget is enforced by the orchestrator loop, which finishes the
+    // turn once the last allowed round has run.
+    return true;
 }
 
-std::shared_ptr<RoundGuard> submitRound(const std::shared_ptr<AgentTurnRunner> &runner, int round)
+std::shared_ptr<RoundGuard> submitRound(const std::shared_ptr<AgentTurnRunner> &runner)
 {
     auto guard = std::make_shared<RoundGuard>();
 
-    // The callback owns its round result; the caller only borrows it while the
-    // guard is still open, and a late callback after a timeout is ignored.
-    auto roundResult = std::make_shared<mathai::clients::AiStreamResult>();
-    const auto settle = [runner, round, guard, roundResult](const mathai::clients::AiStreamResult &result) {
+    // Runs on the AiExecutor worker that owns the transfer. It only records the
+    // outcome: starting the next round here would submit a model call and then
+    // block this worker in waitForRound() until some worker picked that call up,
+    // which is exactly the pool deadlock the orchestrator thread avoids.
+    const auto settle = [guard](const mathai::clients::AiStreamResult &result) {
         bool expected = false;
         if (!guard->settled.compare_exchange_strong(expected, true))
         {
+            // A late callback after the round already timed out.
             return;
         }
         {
             std::lock_guard<std::mutex> lock(guard->mutex);
-            *roundResult = result;
             guard->result = result;
-            guard->reported.store(true);
+            guard->reported = true;
         }
-        // Do NOT run the continuation here: this callback runs on an AiExecutor
-        // worker, and continuing would submit the next round and then block in
-        // runRound() waiting for it. With four workers and four concurrent
-        // tool-using turns, every worker would wait on requests still queued
-        // behind them, so the pool deadlocks until the 120s backstop.
-        // runRound() wakes on the per-turn orchestrator thread instead and
-        // drives the continuation from there.
         guard->settledCondition.notify_all();
     };
 
@@ -1230,53 +1232,62 @@ std::shared_ptr<RoundGuard> submitRound(const std::shared_ptr<AgentTurnRunner> &
     return guard;
 }
 
-void runRound(const std::shared_ptr<AgentTurnRunner> &runner, int round)
+// Blocks the calling orchestrator thread until the worker reports the round.
+// The result is absent only when the deadline expires first.
+std::optional<mathai::clients::AiStreamResult> waitForRound(const std::shared_ptr<RoundGuard> &guard)
 {
-    if (runner->cancelled())
-    {
-        persistPartial(*runner->dao, runner->assistantMessageId, runner->answer,
-                       true);
-        return;
-    }
-
-    const auto guard = submitRound(runner, round);
-
     // Backstop for a lost callback: aiClient_ already times the transfer out at
     // 90s, so this only fires when the executor never picked the task up.
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(120);
     std::unique_lock<std::mutex> lock(guard->mutex);
-    guard->settledCondition.wait_until(lock, deadline, [&guard] { return guard->reported.load(); });
-    const auto settled = guard->reported.load();
-    mathai::clients::AiStreamResult result;
-    if (settled)
+    if (!guard->settledCondition.wait_until(lock, deadline, [&guard] { return guard->reported; }))
     {
-        result = guard->result;
+        bool expected = false;
+        if (guard->settled.compare_exchange_strong(expected, true))
+        {
+            return std::nullopt;
+        }
+        // The callback claimed the round just before the deadline: take its
+        // result instead of failing a round that actually completed.
+        guard->settledCondition.wait(lock, [&guard] { return guard->reported; });
     }
-    lock.unlock();
-
-    if (!settled)
-    {
-        guard->settled.store(true);
-        failTurn(*runner->dao, runner->assistantMessageId, runner->answer,
-                 runner->callbacks, "AI request timed out", "ai_unavailable");
-        return;
-    }
-
-    // The worker only recorded the result; the continuation (tool execution and
-    // the next model round) runs on this orchestrator thread, which owns the
-    // turn and is not part of the shared AiExecutor pool.
-    continueTurn(runner, round, result);
+    return std::move(guard->result);
 }
 
-// Keeps the recursion in one place for readability: a turn starts by running
-// its first round on a dedicated thread. The round does not block on the model
-// call itself (the AiExecutor callback drives the chain), it only waits for the
-// submit to be accepted.
+// The per-turn orchestrator loop. This is the only thread that waits for a model
+// round, and it is a plain detached thread rather than an AiExecutor worker, so
+// a waiting turn never occupies one of the workers its next request needs.
 void servicesStartTurn(const std::shared_ptr<AgentTurnRunner> &runner)
 {
     try
     {
-        runRound(runner, 0);
+        for (int round = 0; round < mathai::services::agentMaximumModelCalls; ++round)
+        {
+            if (runner->cancelled())
+            {
+                persistPartial(*runner->dao, runner->assistantMessageId, runner->answer,
+                               true);
+                return;
+            }
+
+            const auto guard = submitRound(runner);
+            auto result = waitForRound(guard);
+            if (!result)
+            {
+                failTurn(*runner->dao, runner->assistantMessageId, runner->answer,
+                         runner->callbacks, "AI request timed out", "ai_unavailable");
+                return;
+            }
+
+            if (!continueTurn(runner, *result))
+            {
+                return;
+            }
+        }
+
+        // Budget exhausted with tools still pending: keep the text produced so
+        // far rather than failing the whole turn.
+        finishTurn(runner);
     }
     catch (const std::exception &exception)
     {

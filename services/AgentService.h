@@ -77,11 +77,12 @@ class AgentService
     // persisting a turn that can never be generated.
     static bool hasCapacity();
 
-    // Runs the full agent loop on the shared AiExecutor. `excludedUserMessageId`
-    // is the user message just written, kept out of the rebuilt model context
-    // because the caller replays it. The turn always settles exactly once
-    // (onDone or onError) unless the client cancelled, in which case the partial
-    // answer is persisted and neither callback fires.
+    // Runs the full agent loop on a dedicated per-turn orchestrator thread;
+    // individual model calls are submitted to the shared AiExecutor.
+    // `excludedUserMessageId` is the user message just written, kept out of the
+    // rebuilt model context because the caller replays it. The turn always
+    // settles exactly once (onDone or onError) unless the client cancelled, in
+    // which case the partial answer is persisted and neither callback fires.
     void generateTurn(const AgentTurnRequest &request,
                       long long conversationId,
                       long long excludedUserMessageId,
