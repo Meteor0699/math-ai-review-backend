@@ -6,6 +6,9 @@
 
 <script setup>
 import { computed } from 'vue'
+// KaTeX ships ~1 MB of fonts plus its stylesheet; loading it here (instead of
+// main.js) keeps it out of the entry chunk and off pages without formulas.
+import 'katex/dist/katex.min.css'
 import { renderMathContent } from '../utils/renderMathContent'
 
 const props = defineProps({

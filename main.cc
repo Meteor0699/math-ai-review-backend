@@ -199,7 +199,7 @@ static void registerFrontendRoot()
         {drogon::Get});
 
     drogon::app().registerHandlerViaRegex(
-        "^/(login|home|courses.*|chapters.*|knowledge.*|questions.*|study.*|papers.*|admin.*|assets/.*|textbook-covers/.*)$",
+        "^/(login|home|courses.*|chapters.*|knowledge.*|questions.*|study.*|papers.*|admin.*|assets/.*|textbook-covers/.*|robots\\.txt|favicon\\.ico|favicon\\.svg)$",
         [](const drogon::HttpRequestPtr &request,
            std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
             callback(frontendFileResponse(request));
@@ -212,6 +212,9 @@ int main()
     forceKeepControllers();
     mathai::utils::loadDotEnv(".env");
     drogon::app().loadConfigFile("config.json");
+    // Text assets (JS/CSS/JSON/HTML) are compressed on the fly: the built SPA
+    // entry is ~1.2 MB of JavaScript and Drogon sends it uncompressed by default.
+    drogon::app().enableGzip(true).enableBrotli(true);
     mathai::utils::validateJwtConfiguration();
     mathai::utils::registerErrorHandlers();
     registerFrontendRoot();
