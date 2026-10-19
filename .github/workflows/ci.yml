@@ -48,17 +48,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
-      - name: Serve the built SPA
-        run: npx vite preview --port 4173 --strictPort &
-      - name: Wait for the preview server
-        run: |
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          echo "preview server did not start" >&2
-          exit 1
+      # No E2E_BASE_URL on purpose: playwright.config.js starts the Vite dev
+      # server itself and waits for it, which is more reliable in CI than
+      # backgrounding a preview server in a previous step.
       - name: axe WCAG A/AA scan
         run: npx playwright test e2e/a11y.spec.js --project=a11y-chromium --reporter=line
-        env:
-          E2E_BASE_URL: http://127.0.0.1:4173

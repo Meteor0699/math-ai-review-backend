@@ -4,9 +4,9 @@
 import { chromium } from '@playwright/test'
 
 const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:8080'
-const user = process.env.E2E_STUDENT_USERNAME || 'student'
-const pass = process.env.E2E_STUDENT_PASSWORD || '123456'
-const routes = ['/login', '/home', '/courses', '/questions', '/questions/1', '/study']
+// Only the public login page is exercised here: it renders Element Plus inputs,
+// tabs and buttons, which is enough to catch unresolved on-demand components or
+// directives. Authenticated routes need a database, so they are not required.
 
 const browser = await chromium.launch({ channel: 'msedge', headless: true })
 const context = await browser.newContext({ viewport: { width: 1440, height: 960 } })

@@ -973,6 +973,8 @@ struct RoundGuard
 {
     std::mutex mutex;
     std::condition_variable settledCondition;
+    // Filled by the AiExecutor worker, consumed by the orchestrator thread.
+    mathai::clients::AiStreamResult result;
     std::atomic_bool settled{false};
     std::atomic_bool reported{false};
 };
@@ -1200,25 +1202,17 @@ std::shared_ptr<RoundGuard> submitRound(const std::shared_ptr<AgentTurnRunner> &
         {
             std::lock_guard<std::mutex> lock(guard->mutex);
             *roundResult = result;
+            guard->result = result;
             guard->reported.store(true);
         }
+        // Do NOT run the continuation here: this callback runs on an AiExecutor
+        // worker, and continuing would submit the next round and then block in
+        // runRound() waiting for it. With four workers and four concurrent
+        // tool-using turns, every worker would wait on requests still queued
+        // behind them, so the pool deadlocks until the 120s backstop.
+        // runRound() wakes on the per-turn orchestrator thread instead and
+        // drives the continuation from there.
         guard->settledCondition.notify_all();
-        try
-        {
-            continueTurn(runner, round, *roundResult);
-        }
-        catch (const std::exception &exception)
-        {
-            LOG_ERROR << "AgentService: turn continuation failed: " << exception.what();
-            failTurn(*runner->dao, runner->assistantMessageId, runner->answer,
-                     runner->callbacks, "agent turn failed", "internal_error");
-        }
-        catch (...)
-        {
-            LOG_ERROR << "AgentService: turn continuation failed with an unknown error";
-            failTurn(*runner->dao, runner->assistantMessageId, runner->answer,
-                     runner->callbacks, "agent turn failed", "internal_error");
-        }
     };
 
     mathai::clients::AiStreamCallbacks streamCallbacks;
@@ -1253,6 +1247,11 @@ void runRound(const std::shared_ptr<AgentTurnRunner> &runner, int round)
     std::unique_lock<std::mutex> lock(guard->mutex);
     guard->settledCondition.wait_until(lock, deadline, [&guard] { return guard->reported.load(); });
     const auto settled = guard->reported.load();
+    mathai::clients::AiStreamResult result;
+    if (settled)
+    {
+        result = guard->result;
+    }
     lock.unlock();
 
     if (!settled)
@@ -1260,7 +1259,13 @@ void runRound(const std::shared_ptr<AgentTurnRunner> &runner, int round)
         guard->settled.store(true);
         failTurn(*runner->dao, runner->assistantMessageId, runner->answer,
                  runner->callbacks, "AI request timed out", "ai_unavailable");
+        return;
     }
+
+    // The worker only recorded the result; the continuation (tool execution and
+    // the next model round) runs on this orchestrator thread, which owns the
+    // turn and is not part of the shared AiExecutor pool.
+    continueTurn(runner, round, result);
 }
 
 // Keeps the recursion in one place for readability: a turn starts by running
