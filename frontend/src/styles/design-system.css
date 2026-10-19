@@ -398,3 +398,11 @@ a:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* axe color-contrast: Element Plus ships .el-tag--info as #909399 on #f4f4f5
+   (about 2.8:1). Use a slate pair that clears AA while staying "informational". */
+.el-tag.el-tag--info {
+  color: #475569;
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+}

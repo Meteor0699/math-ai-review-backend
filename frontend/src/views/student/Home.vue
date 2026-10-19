@@ -192,7 +192,7 @@ function handleImageError(event) {
 
 .welcome-copy > span {
   font-size: var(--text-sm);
-  opacity: 0.86;
+  opacity: 1;
 }
 
 .welcome-copy h1 {

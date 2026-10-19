@@ -19,8 +19,11 @@ async function scan(page, label) {
   const summary = results.violations.map((v) => ({
     id: v.id,
     impact: v.impact,
-    nodes: v.nodes.length,
-    help: v.help
+    help: v.help,
+    nodes: v.nodes.slice(0, 4).map((n) => ({
+      target: n.target.join(' '),
+      html: (n.html || '').slice(0, 140)
+    }))
   }))
   expect(summary, `${label} axe violations: ${JSON.stringify(summary, null, 2)}`).toEqual([])
 }
