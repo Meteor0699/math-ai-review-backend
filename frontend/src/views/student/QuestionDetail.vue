@@ -117,6 +117,7 @@
                 maxlength="500"
                 show-word-limit
                 placeholder="例如：为什么这里可以使用洛必达法则？"
+                aria-label="向 AI 追问这道题"
               />
               <div class="follow-up-actions">
                 <el-button

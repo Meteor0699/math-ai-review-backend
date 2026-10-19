@@ -706,7 +706,7 @@ onBeforeUnmount(() => {
 .agent-note {
   display: inline-block;
   margin-top: var(--space-1);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 
@@ -745,7 +745,7 @@ onBeforeUnmount(() => {
 }
 
 .agent-tool-meta {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 
@@ -761,7 +761,7 @@ onBeforeUnmount(() => {
 
 .agent-tool-caption {
   margin-top: var(--space-2);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 
@@ -828,7 +828,7 @@ onBeforeUnmount(() => {
 
 .agent-input:focus-visible {
   border-color: var(--color-primary);
-  outline: 3px solid rgba(37, 99, 235, 0.18);
+  outline: 3px solid #2563eb;
   outline-offset: 1px;
 }
 
@@ -846,7 +846,7 @@ onBeforeUnmount(() => {
 }
 
 .agent-hint {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 

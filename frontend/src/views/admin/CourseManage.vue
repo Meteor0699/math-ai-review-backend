@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page course-manage">
     <div class="page-header">
-      <h2>课程管理</h2>
+      <h1>课程管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增课程
@@ -13,7 +13,7 @@
       <el-table-column v-if="!isCompact" prop="id" label="ID" width="70" />
       <el-table-column v-if="!isCompact" label="封面" width="92">
         <template #default="{ row }">
-          <img v-if="row.coverUrl" class="cover-thumb" :src="row.coverUrl" :alt="row.courseName" />
+          <img v-if="row.coverUrl" class="cover-thumb" :src="row.coverUrl" :alt="row.courseName" width="46" height="64" loading="lazy" decoding="async" />
           <span v-else class="cover-empty">无</span>
         </template>
       </el-table-column>
@@ -170,7 +170,7 @@ async function handleDelete(row) {
 }
 
 .cover-empty {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 </style>

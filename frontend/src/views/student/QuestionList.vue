@@ -3,22 +3,29 @@
     <PageHeader title="题库练习" description="按课程、章节、题型和难度找到当前需要的题目。" />
 
     <section class="filter-panel">
-      <el-input v-model="filters.keyword" :prefix-icon="Search" clearable placeholder="搜索题目标题或题干" @keyup.enter="applyFilters" />
-      <el-select v-model="filters.courseId" clearable placeholder="全部课程" @change="handleCourseChange">
+      <el-input
+        v-model="filters.keyword"
+        :prefix-icon="Search"
+        clearable
+        placeholder="搜索题目标题或题干"
+        aria-label="搜索题目标题或题干"
+        @keyup.enter="applyFilters"
+      />
+      <el-select v-model="filters.courseId" clearable placeholder="全部课程" aria-label="课程" @change="handleCourseChange">
         <el-option v-for="course in courses" :key="course.id" :label="course.courseName" :value="course.id" />
       </el-select>
-      <el-select v-model="filters.chapterId" clearable placeholder="全部章节" :disabled="!filters.courseId">
+      <el-select v-model="filters.chapterId" clearable placeholder="全部章节" aria-label="章节" :disabled="!filters.courseId">
         <el-option v-for="chapter in chapters" :key="chapter.id" :label="chapter.chapterName || chapter.title" :value="chapter.id" />
       </el-select>
-      <el-select v-model="filters.questionType" clearable placeholder="全部题型">
+      <el-select v-model="filters.questionType" clearable placeholder="全部题型" aria-label="题型">
         <el-option v-for="item in questionTypes" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
-      <el-select v-model="filters.difficulty" clearable placeholder="全部难度">
+      <el-select v-model="filters.difficulty" clearable placeholder="全部难度" aria-label="难度">
         <el-option label="基础" value="basic" />
         <el-option label="中等" value="medium" />
         <el-option label="较难" value="hard" />
       </el-select>
-      <el-input v-model="filters.source" clearable placeholder="题目来源" />
+      <el-input v-model="filters.source" clearable placeholder="题目来源" aria-label="题目来源" />
       <div class="filter-actions">
         <el-button type="primary" :icon="Search" @click="applyFilters">筛选</el-button>
         <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
@@ -35,7 +42,16 @@
     </div>
 
     <div v-else class="question-list">
-      <article v-for="(question, index) in questions" :key="question.id" class="question-card" @click="$router.push(`/questions/${question.id}`)">
+      <article
+        v-for="(question, index) in questions"
+        :key="question.id"
+        class="question-card"
+        role="link"
+        tabindex="0"
+        @click="$router.push(`/questions/${question.id}`)"
+        @keydown.enter.self="$router.push(`/questions/${question.id}`)"
+        @keydown.space.prevent.self="$router.push(`/questions/${question.id}`)"
+      >
         <span class="question-number">{{ String((page - 1) * pageSize + index + 1).padStart(2, '0') }}</span>
         <div class="question-copy">
           <h2>{{ question.title || '未命名题目' }}</h2>
@@ -253,6 +269,11 @@ function difficultyType(value) {
 .question-card:hover {
   transform: translateY(-2px);
   border-color: var(--color-primary);
+}
+
+.question-card:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .question-number {

@@ -13,6 +13,10 @@
             v-if="getPrimaryCourseCover(course)"
             :src="getPrimaryCourseCover(course)"
             :alt="`${course.courseName || course.name}教材封面`"
+            width="116"
+            height="224"
+            loading="lazy"
+            decoding="async"
             @error="hideBrokenImage"
           />
           <span class="cover-fallback"><el-icon><Collection /></el-icon></span>

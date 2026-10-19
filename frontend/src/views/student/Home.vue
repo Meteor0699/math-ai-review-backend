@@ -37,11 +37,24 @@
           <el-button text type="primary" @click="router.push('/courses')">查看全部</el-button>
         </div>
         <div v-loading="courseLoading" class="course-list">
-          <article v-for="course in courses.slice(0, 3)" :key="course.id" class="course-row" @click="router.push(`/courses/${course.id}`)">
+          <article
+            v-for="course in courses.slice(0, 3)"
+            :key="course.id"
+            class="course-row"
+            role="link"
+            tabindex="0"
+            @click="router.push(`/courses/${course.id}`)"
+            @keydown.enter.self="router.push(`/courses/${course.id}`)"
+            @keydown.space.prevent.self="router.push(`/courses/${course.id}`)"
+          >
             <img
               v-if="getPrimaryCourseCover(course)"
               :src="getPrimaryCourseCover(course)"
               :alt="`${course.courseName}课程封面`"
+              width="76"
+              height="76"
+              loading="lazy"
+              decoding="async"
               @error="handleImageError"
             />
             <div class="course-fallback"><el-icon><Collection /></el-icon></div>
@@ -189,7 +202,7 @@ function handleImageError(event) {
 
 .welcome-copy p {
   max-width: 620px;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .welcome-actions {
@@ -290,6 +303,11 @@ function handleImageError(event) {
 
 .course-row:hover {
   background: var(--color-primary-light);
+}
+
+.course-row:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .course-row img,

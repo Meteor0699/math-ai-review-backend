@@ -2,7 +2,7 @@
   <div class="app-page paper-list">
     <div class="page-header">
       <div>
-        <h2>试卷库</h2>
+        <h1>试卷库</h1>
         <p>查看公开试卷，也可以上传自己的数学试卷，AI 审核通过后纳入试卷库。</p>
       </div>
       <el-button type="primary" @click="openUploadDialog">
@@ -235,7 +235,7 @@ function openPaper(paper) {
   margin-bottom: var(--space-5);
 }
 
-.page-header h2 {
+.page-header h1 {
   color: var(--color-text-primary);
   font-size: var(--text-2xl);
 }
@@ -301,7 +301,7 @@ function openPaper(paper) {
   gap: var(--space-2);
   align-items: center;
   font-size: var(--text-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .upload-box {

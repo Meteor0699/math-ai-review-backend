@@ -12,6 +12,10 @@
             v-if="getPrimaryCourseCover(course)"
             :src="getPrimaryCourseCover(course)"
             :alt="`${course.courseName} 课程封面`"
+            width="152"
+            height="202"
+            loading="lazy"
+            decoding="async"
           />
           <div v-else class="info-icon">
             <el-icon :size="28"><Notebook /></el-icon>
@@ -19,7 +23,7 @@
         </div>
         <div class="hero-main">
           <div class="hero-title-row">
-            <h2>{{ course.courseName }}</h2>
+            <h1>{{ course.courseName }}</h1>
             <el-tag size="small" effect="plain">{{ course.courseCode }}</el-tag>
           </div>
           <p class="info-desc">{{ course.courseDesc }}</p>
@@ -38,7 +42,7 @@
       </div>
       <div class="textbook-grid">
         <div v-for="book in textbooks" :key="book.coverUrl" class="textbook-card">
-          <img class="textbook-cover" :src="book.coverUrl" :alt="book.title" />
+          <img class="textbook-cover" :src="book.coverUrl" :alt="book.title" width="86" height="122" loading="lazy" decoding="async" />
           <div class="textbook-info">
             <strong>{{ book.title }}</strong>
             <span>{{ book.subtitle }}</span>
@@ -63,7 +67,14 @@
         class="chapter-card"
         shadow="hover"
       >
-        <div class="chapter-main" @click="$router.push(`/chapters/${chapter.id}`)">
+        <div
+          class="chapter-main"
+          role="link"
+          tabindex="0"
+          @click="$router.push(`/chapters/${chapter.id}`)"
+          @keydown.enter.self="$router.push(`/chapters/${chapter.id}`)"
+          @keydown.space.prevent.self="$router.push(`/chapters/${chapter.id}`)"
+        >
           <div class="chapter-index">{{ index + 1 }}</div>
           <div class="chapter-info">
             <div class="chapter-title">{{ chapter.title }}</div>
@@ -173,7 +184,7 @@ onMounted(async () => {
   margin-bottom: var(--space-3);
 }
 
-.hero-title-row h2 {
+.hero-title-row h1 {
   font-size: var(--text-2xl);
   font-weight: 700;
   color: var(--color-text-primary);
@@ -217,7 +228,7 @@ onMounted(async () => {
 
 .section-count {
   font-size: var(--text-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .textbook-grid {
@@ -257,7 +268,7 @@ onMounted(async () => {
 
 .textbook-info span,
 .textbook-info small {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 
@@ -282,6 +293,11 @@ onMounted(async () => {
   gap: var(--space-4);
   padding: var(--space-1) 0;
   cursor: pointer;
+}
+
+.chapter-main:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .chapter-index {
@@ -309,7 +325,7 @@ onMounted(async () => {
 
 .chapter-desc {
   margin-top: var(--space-1);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-sm);
 }
 

@@ -4,7 +4,7 @@
       <el-button text @click="$router.back()">
         <el-icon><ArrowLeft /></el-icon> 返回
       </el-button>
-      <h2>知识点列表</h2>
+      <h1>知识点列表</h1>
     </div>
     <div v-loading="loading">
       <el-card v-for="kp in list" :key="kp.id" class="kp-card" style="margin-bottom: 12px">
@@ -45,7 +45,7 @@ onMounted(async () => {
 <style scoped>
 .knowledge-list { max-width: 900px; margin: 0 auto; }
 .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-.page-header h2 { font-size: 22px; }
+.page-header h1 { font-size: 22px; }
 .kp-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
 .kp-content { font-size: 14px; color: #606266; line-height: 1.6; }
 </style>

@@ -1,5 +1,6 @@
 <template>
   <div class="admin-shell">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <aside class="admin-sidebar">
       <div class="admin-brand"><AppLogo to="/admin/home" /></div>
       <div class="admin-label">管理工作台</div>
@@ -40,9 +41,9 @@
       </div>
     </header>
 
-    <main class="admin-content"><router-view /></main>
+    <main id="main-content" tabindex="-1" class="admin-content"><router-view /></main>
 
-    <el-drawer v-model="drawerOpen" direction="ltr" size="280px" :with-header="false">
+    <el-drawer v-model="drawerOpen" direction="ltr" size="280px" :with-header="false" aria-label="导航菜单">
       <div class="admin-brand"><AppLogo to="/admin/home" /></div>
       <nav class="drawer-navigation">
         <router-link v-for="item in navigation" :key="item.path" :to="item.path" @click="drawerOpen = false">
@@ -121,7 +122,7 @@ function handleLogout() {
 
 .admin-label {
   padding: 22px 24px 8px;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 

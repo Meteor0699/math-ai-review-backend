@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page paper-manage">
     <div class="page-header">
-      <h2>试卷管理</h2>
+      <h1>试卷管理</h1>
       <el-button type="primary" @click="openUploadDialog">
         <el-icon><Upload /></el-icon>
         上传试卷
@@ -280,7 +280,7 @@ function handleDownload(row) {
 <style scoped>
 .upload-tip {
   margin-top: var(--space-1);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   font-size: var(--text-xs);
 }
 </style>

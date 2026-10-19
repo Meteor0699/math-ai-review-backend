@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page knowledge-manage">
     <div class="page-header">
-      <h2>知识点管理</h2>
+      <h1>知识点管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增知识点

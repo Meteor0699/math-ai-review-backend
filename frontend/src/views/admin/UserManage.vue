@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page user-manage">
     <div class="page-header">
-      <h2>用户管理</h2>
+      <h1>用户管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增用户
@@ -13,6 +13,7 @@
         <el-input
           v-model="filters.keyword"
           placeholder="用户名 / 姓名 / 学号"
+          aria-label="关键词"
           clearable
           style="width: 220px"
           @keyup.enter="fetchList"

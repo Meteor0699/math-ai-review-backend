@@ -1,7 +1,7 @@
 <template>
   <div class="app-page management-page question-manage">
     <div class="page-header">
-      <h2>题库管理</h2>
+      <h1>题库管理</h1>
       <el-button type="primary" @click="openDialog(null)">
         <el-icon><Plus /></el-icon>
         新增题目
